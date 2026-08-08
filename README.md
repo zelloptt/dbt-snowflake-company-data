@@ -30,7 +30,7 @@ This package absorbs that complexity once so you do not have to solve it in ever
 | **Matching** | Deterministic identifier joins plus blocked fuzzy name matching, so you can attach your own CRM records to the public spine. |
 | **Macros** | Company name normalization, match scoring, and blocking, usable on their own. |
 
-Full model list arrives with the first release. See [DECISIONLOG.md](DECISIONLOG.md) for the reasoning behind each modeling choice.
+Full model list arrives with the first release. See [DECISIONLOG.md](https://github.com/zelloptt/dbt-snowflake-company-data/blob/main/DECISIONLOG.md) for the reasoning behind each modeling choice.
 
 ## Warehouse Support
 
@@ -131,7 +131,7 @@ Full variable reference lands with the first release.
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](https://github.com/zelloptt/dbt-snowflake-company-data/blob/main/CONTRIBUTING.md).
 
 ## Data, Attribution, and Licensing
 

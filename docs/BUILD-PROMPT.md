@@ -154,7 +154,7 @@ Write everything you learn to `DISCOVERY.md` at the repo root, structured as:
 
 **Most of this already exists.** The repo was bootstrapped with `dbt_project.yml`, `packages.yml`, `LICENSE`, `README.md`, `CHANGELOG.md`, `DECISIONLOG.md`, `CONTRIBUTING.md`, `RELEASE.md`, `CLAUDE.md`, `.gitignore`, `.github/` templates, `CODEOWNERS`, and `integration_tests/profiles.yml.example`. Read `CLAUDE.md` first; it is the authority on conventions and it already encodes the ground rules above.
 
-Your job in this phase is to fill the gaps, not to recreate what is there. Missing: `integration_tests/dbt_project.yml`, `.github/workflows/`, and every model, macro, seed, and test. Delete each `.gitkeep` as its directory gets real contents. Delete `SETUP.md` if it is still present.
+Your job in this phase is to fill the gaps, not to recreate what is there. Missing: `integration_tests/dbt_project.yml`, `.github/workflows/`, and every model, macro, seed, and test. The empty scaffold directories and their `.gitkeep` files were removed; git recreates a directory as soon as a real file lands in it. Anything you add under `models/`, `macros/`, `seeds/`, `tests/`, `snapshots/`, or `analyses/` ships to consumers, so check `.gitattributes` before adding a path anywhere else.
 
 For reference, the target structure:
 
