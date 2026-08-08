@@ -9,6 +9,15 @@ Initial release. Not yet published to the dbt Package Hub.
 ## Under the Hood
 
 - `require-dbt-version` set to `[">=1.10.0", "<3.0.0"]` for dbt Fusion compatibility.
+- Development files are excluded from the distribution archive via `.gitattributes`.
+  A Package Hub install untars GitHub's source tarball for the tag straight into
+  your `dbt_packages/`, and those tarballs honour `export-ignore`, so
+  `integration_tests/`, `.github/`, `docs/` and our contributor documentation no
+  longer land in your project. You receive 5 files instead of 32.
+- `README.md` now links to `DECISIONLOG.md` and `CONTRIBUTING.md` absolutely, so
+  those links resolve when the README is read from inside `dbt_packages/`.
+- Removed the empty scaffold directories and their `.gitkeep` files. dbt tolerates
+  resource paths that are declared in `dbt_project.yml` but absent from disk.
 
 <!--
 FORMAT NOTES (delete this block before the first published release)
