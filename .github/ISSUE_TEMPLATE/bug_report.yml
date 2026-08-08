@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in the package does not work as documented
+title: "[Bug] "
+labels: ["type:bug"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Before you file
+      options:
+        - label: I searched existing issues and did not find this
+          required: true
+        - label: I ran `GRANT IMPORTED PRIVILEGES ON DATABASE <db> TO ROLE <role>` and my dbt role can query the share directly
+          required: true
+
+  - type: textarea
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: The dbt command you ran and any relevant model or macro.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Your packages.yml block
+      render: yaml
+      placeholder: |
+        packages:
+          - package: zelloptt/snowflake_company_data
+            version: [">=0.1.0", "<0.2.0"]
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Your package configuration
+      description: The `vars:` block you set for this package. Remove anything sensitive.
+      render: yaml
+    validations:
+      required: false
+
+  - type: input
+    attributes:
+      label: dbt version
+      description: Output of `dbt --version`, or the Fusion version if you are on Fusion.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Error output or compiled SQL
+      description: The full error, or the compiled SQL from `target/compiled/` if the query runs but returns the wrong thing.
+      render: shell
+    validations:
+      required: false

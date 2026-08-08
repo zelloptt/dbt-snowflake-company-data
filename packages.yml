@@ -1,0 +1,14 @@
+# Keep this empty if at all possible. Every dependency is a resolution
+# constraint we impose on every consumer of this package.
+#
+# If a dependency becomes necessary:
+#   - install from the dbt Package Hub, not git, so dbt can deduplicate
+#   - use the widest version range that works
+#   - never pin to a patch version unless a specific incompatibility is known
+#
+# Example:
+# packages:
+#   - package: dbt-labs/dbt_utils
+#     version: [">=1.0.0", "<2.0.0"]
+
+packages: []

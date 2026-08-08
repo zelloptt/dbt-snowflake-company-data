@@ -1,0 +1,15 @@
+# Code owners are requested for review automatically on every PR.
+#
+# Use GitHub usernames or team slugs, never email addresses. This file
+# becomes public when the repository does.
+#
+# Once a data team slug exists in the org, replace the individual list with
+# it (e.g. `* @zelloptt/data`) so membership changes do not require a PR here.
+
+* @raphaelvarieras
+
+# Release and licensing surface: narrower ownership on purpose.
+/LICENSE            @raphaelvarieras
+/RELEASE.md         @raphaelvarieras
+/CHANGELOG.md       @raphaelvarieras
+/.github/workflows/ @raphaelvarieras

@@ -1,0 +1,37 @@
+name: Feature request
+description: Propose a new model, macro, or configuration option
+title: "[Feature] "
+labels: ["type:enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: What problem does this solve
+      description: Describe the analytical problem, not the implementation. What are you trying to answer that you cannot answer today?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Proposed approach
+      description: Optional. If you have a shape in mind, describe it.
+    validations:
+      required: false
+
+  - type: dropdown
+    attributes:
+      label: Would this be a breaking change
+      options:
+        - "No, purely additive"
+        - "Yes, it changes an existing model or variable"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: checkboxes
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not require supporting a warehouse other than Snowflake
+          required: true
+        - label: This does not require shipping data derived from the Snowflake share
+          required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question about the underlying data
+    url: https://app.snowflake.com/marketplace/listing/GZTSZ290BV255
+    about: Data content, coverage, and refresh questions belong with Snowflake, not this package. We only ship SQL.
+  - name: dbt community Slack
+    url: https://www.getdbt.com/community/
+    about: General dbt questions are better answered by the community.

@@ -1,0 +1,28 @@
+# Copy to profiles.yml (gitignored) and fill in your own connection.
+#
+# Prefer environment variables over literals. Anything you type here as a
+# literal is one `git add -f` away from being in public history forever.
+#
+# Use the DBT_ENV_SECRET_ prefix on secrets so dbt scrubs them from logs.
+
+integration_tests:
+  target: snowflake
+  outputs:
+    snowflake:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+
+      # Key-pair auth is preferred. The .p8 file is gitignored.
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH') }}"
+      private_key_passphrase: "{{ env_var('DBT_ENV_SECRET_SNOWFLAKE_KEY_PASSPHRASE') }}"
+
+      # Password auth alternative:
+      # password: "{{ env_var('DBT_ENV_SECRET_SNOWFLAKE_PASSWORD') }}"
+
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      schema: snoco_integration_tests
+      threads: 8
+      client_session_keep_alive: false

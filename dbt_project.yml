@@ -1,0 +1,89 @@
+name: 'snowflake_company_data'
+version: '0.1.0'
+config-version: 2
+
+# The <3.0.0 ceiling is deliberate. The dbt Fusion engine reports itself as
+# version 2.x, so a <2.0.0 ceiling costs the Fusion-compatible badge on the
+# dbt Package Hub and makes Fusion warn (and eventually error) on install.
+# Do not narrow this without reading RELEASE.md first.
+require-dbt-version: [">=1.10.0", "<3.0.0"]
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+snapshot-paths: ["snapshots"]
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  snowflake_company_data:
+
+    # ------------------------------------------------------------------
+    # Source location
+    #
+    # snoco_database is deliberately NOT declared here. If a package declares
+    # a var as null in its own dbt_project.yml, var('snoco_database', default)
+    # resolves to null rather than falling back, because the var IS defined.
+    # Leaving it undeclared lets the var() default in the sources file work.
+    # The default is SNOWFLAKE_PUBLIC_DATA_FREE, not target.database, because
+    # the share is a separate database from the user's build database.
+    # ------------------------------------------------------------------
+    snoco_schema: 'PUBLIC_DATA_FREE'
+
+    # ------------------------------------------------------------------
+    # Source table identifiers
+    # Generated from live introspection. See DISCOVERY.md.
+    # These exist so the integration test project can repoint every source
+    # at a seed without touching package code.
+    # ------------------------------------------------------------------
+    # snoco_company_index_identifier: 'company_index'
+
+    # ------------------------------------------------------------------
+    # Enablement flags (single underscore)
+    # ------------------------------------------------------------------
+    snoco_company_enabled: true
+    snoco_sec_enabled: true
+    snoco_securities_enabled: true
+    snoco_geography_enabled: true
+    snoco_matching_enabled: false
+
+    # ------------------------------------------------------------------
+    # User-facing configuration (double underscore)
+    #
+    # The nulls and empty lists below are intentional "not configured"
+    # sentinels, unlike snoco_database above. Because they are declared,
+    # var('x', fallback) will NOT fall back for them. Resolve them by
+    # truthiness in Jinja or via a macro, never via a var() default.
+    # ------------------------------------------------------------------
+    snoco__characteristic_types: []
+    snoco__legal_suffixes: []
+    snoco__match_source: null
+    snoco__match_id_column: null
+    snoco__match_name_column: 'company_name'
+    snoco__match_domain_column: null
+    snoco__match_ticker_column: null
+    snoco__match_min_score: 0.90
+    snoco__match_max_candidates: 5
+    snoco__hierarchy_max_depth: 10
+    snoco__source_freshness_enabled: false
+
+    # ------------------------------------------------------------------
+    # Engine escape hatch
+    # Set true in the Fusion CI lane to skip resources Fusion cannot parse.
+    # ------------------------------------------------------------------
+    deactivate_for_fusion: false
+
+models:
+  snowflake_company_data:
+    +materialized: table
+    +schema: snowflake_company_data
+    staging:
+      +materialized: view
+      +schema: stg_snowflake_company_data
+    intermediate:
+      +materialized: ephemeral
+    companies:
+      +materialized: table
+    matching:
+      +materialized: table

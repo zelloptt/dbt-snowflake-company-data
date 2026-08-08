@@ -1,0 +1,85 @@
+# =============================================================================
+# Credentials and connection config
+# This block is the reason this repo can be flipped from private to public
+# safely. Git history is preserved across that flip, so anything committed
+# here now is public forever. Nothing in this block should ever be tracked.
+# =============================================================================
+profiles.yml
+!**/profiles.yml.example
+.env
+*.env
+!*.env.example
+.envrc
+.user.yml
+
+# Snowflake key-pair auth private keys
+*.p8
+*.pem
+*.key
+rsa_key*
+!**/*.pub
+
+# Cloud provider credentials that sometimes land in a data repo
+*.json.credentials
+service-account*.json
+.snowsql/
+~/.snowsql/
+
+# =============================================================================
+# dbt build artifacts
+# =============================================================================
+target/
+dbt_packages/
+dbt_modules/
+logs/
+
+# The package must not lock its own dependencies; that would defeat the
+# consumer's resolution. The integration test project SHOULD lock its own,
+# which is why it is re-included below.
+/package-lock.yml
+!integration_tests/package-lock.yml
+
+# =============================================================================
+# Python tooling (integration tests, release scripts)
+# =============================================================================
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.tox/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.python-version
+*.egg-info/
+
+# =============================================================================
+# Editors and OS
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# Agent tooling
+# CLAUDE.md IS tracked (it is the conventions file). Local settings are not.
+# =============================================================================
+.claude/settings.local.json
+.claude/local/
+
+# =============================================================================
+# Scratch
+# Use scratch/ for anything you do not want in history. Nothing else.
+# =============================================================================
+scratch/
+*.local.sql
+*.local.md
