@@ -4,11 +4,18 @@ Live introspection of the Snowflake Public Data (Free) share. **This file is the
 source of truth for column names and shapes.** Public documentation for this
 dataset is thin and in places wrong; everything below was measured, not read.
 
-Scanned 2026-08-08 against the share attached to Zello's account as
-`MARKETPLACE_CYBERSYN.PUBLIC_DATA_FREE`. Marketplace listing `GZTSZ290BV255`.
+Scanned 2026-08-08 against Marketplace listing `GZTSZ290BV255`, schema
+`PUBLIC_DATA_FREE`.
 
-Consumers attach the same listing under whatever database name they choose,
-which is why every source location in this package is a var.
+The listing suggests the database name `MARKETPLACE_CYBERSYN` at acquisition,
+but any consumer may choose another, which is why every source location in this
+package is a var.
+
+**The listing also exposes a `CYBERSYN` schema, and it is not interchangeable.**
+It is the older Financial Data Package layout and holds 6 of the 9 objects
+below: `COMPANY_CHARACTERISTICS`, `COMPANY_DOMAIN_RELATIONSHIPS` and
+`SEC_CIK_INDEX` are absent from it. Everything here was measured against
+`PUBLIC_DATA_FREE`.
 
 ---
 
@@ -27,9 +34,8 @@ Nine of the ~370 objects in the share. Everything else is out of scope.
 | `OPENFIGI_SECURITY_INDEX` | 119,273 | `top_level_openfigi_id` |
 | `PERMID_SECURITY_INDEX` | 25,751 | `permid_security_id` |
 | `GEOGRAPHY_INDEX` | 573,277 | `geo_id`, unique |
-| `NAICS_CODE_INDEX` | 8,858 | `naics_code` + `naics_classification_year` |
 
-All ten are **secure views**, not tables. `INFORMATION_SCHEMA.TABLES.ROW_COUNT`
+All of them are **secure views**, not tables. `INFORMATION_SCHEMA.TABLES.ROW_COUNT`
 and `BYTES` are `NULL` for every one of them, confirming the trap already
 recorded in `CLAUDE.md`. Every count above is a real `count(*)`.
 
@@ -92,7 +98,6 @@ exist on this object; `COMPANY_CHARACTERISTICS` uses `sic_code` as a
 - `COMPANY_RELATIONSHIPS`: adds `RELATED_COMPANY_ID`, `RELATED_COMPANY_NAME`, `RELATED_ENTITY_LEVEL`, `RELATIONSHIP_TYPE`
 - `COMPANY_SECURITY_RELATIONSHIPS`: `COMPANY_ID`, `COMPANY_NAME`, `SECURITY_ID_TYPE`, `SECURITY_ID`, `SECURITY_NAME`
 - `GEOGRAPHY_INDEX`: `GEO_ID`, `GEO_NAME`, `LEVEL`, `ISO_NAME`, `ISO_ALPHA2`, `ISO_ALPHA3`, `ISO_NUMERIC_CODE`, `ISO_3166_2_CODE`
-- `NAICS_CODE_INDEX`: `NAICS_CODE`, `SECTOR`, `NAICS_CLASSIFICATION_YEAR`, `NAICS_HIERARCHY`
 
 ---
 

@@ -8,10 +8,15 @@ sources:
       two security indexes, and the geography lookup. NAICS is deliberately not
       among them; see the note at the end of this file.
 
-      Location is entirely var-driven, because the share's database name is
-      chosen at `CREATE DATABASE ... FROM LISTING` time and differs in every
-      account. Set `snoco_database` and `snoco_schema`. The defaults describe
-      Zello's own deployment, which reads a daily replica rather than the share.
+      Defaults match the names Snowflake proposes when you acquire the listing,
+      so an install that takes the suggested database name needs no
+      configuration. Override `snoco_database` if you named it something else,
+      which you may well have, and `snoco_schema` only if you are reading a
+      replica rather than the share.
+
+      Note that `CYBERSYN` is also a valid schema in this listing and is the
+      wrong one: it is the older Financial Data Package layout and is missing
+      three of the nine objects below.
 
     database: "{{ var('snoco_database', 'MARKETPLACE_CYBERSYN') }}"
     schema: "{{ var('snoco_schema') }}"
@@ -177,5 +182,4 @@ sources:
 # NAICS_CODE_INDEX is deliberately not declared. It is a standalone NAICS
 # definition list with no join path to any company object in the free share,
 # so it cannot drive industry rollups here. Company industry comes from SIC
-# (sec_cik_index.sic) and sec_industry_group instead. Zello's replica clones it
-# anyway, against a future need; that is a replica decision, not a package one.
+# (sec_cik_index.sic) and sec_industry_group instead.

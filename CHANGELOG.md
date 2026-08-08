@@ -23,6 +23,13 @@ Initial release. Not yet published to the dbt Package Hub.
 
 ## Bug Fixes
 
+- **Source location defaults changed to `MARKETPLACE_CYBERSYN` / `PUBLIC_DATA_FREE`**,
+  the names the listing itself proposes, so an install that accepted the
+  suggested database name needs no configuration at all. Previous defaults
+  pointed at a private replica and required every consumer to override both.
+  **Note `CYBERSYN` is also a schema in this listing and is the wrong one:** it
+  is the older Financial Data Package layout and is missing
+  `COMPANY_CHARACTERISTICS`, `COMPANY_DOMAIN_RELATIONSHIPS` and `SEC_CIK_INDEX`.
 - **`require-dbt-version` floor raised from `>=1.10.0` to `>=1.10.8`.** The
   package's generic tests nest under `arguments:`, which fails on 1.10.0 through
   1.10.7 with `macro 'dbt_macro__test_relationships' takes no keyword argument

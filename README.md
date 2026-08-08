@@ -61,10 +61,10 @@ Two setup steps account for essentially every "it does not work" report. Do both
 **1. Get the data.** Acquire the [Snowflake Public Data (Free)](https://app.snowflake.com/marketplace/listing/GZTSZ290BV255) listing in your account. Your organization must accept Snowflake's provider and consumer terms at the ORGADMIN level first; you cannot obtain the listing until that happens.
 
 ```sql
-CREATE DATABASE IF NOT EXISTS SNOWFLAKE_PUBLIC_DATA_FREE FROM LISTING 'GZTSZ290BV255';
+CREATE DATABASE IF NOT EXISTS MARKETPLACE_CYBERSYN FROM LISTING 'GZTSZ290BV255';
 ```
 
-The database name is yours to choose at install time. Whatever you pick, tell the package about it (see [Configure](#configure)).
+`MARKETPLACE_CYBERSYN` is the name Snowflake proposes and the name this package defaults to. You may pick another; if you do, tell the package (see [Configure](#configure)).
 
 **2. Grant access to your dbt role.** By default *only the role that created the database can read it*. This is the single most common failure:
 
@@ -88,27 +88,29 @@ While pre-1.0, pin to a minor range. Breaking changes ship as minor bumps until 
 
 ## Configure
 
-**You must set both location vars.** There is no default that works
-unconfigured, because the share's database name is chosen by whoever runs
-`CREATE DATABASE ... FROM LISTING` and is different in every account.
+The defaults match the names Snowflake proposes when you acquire the listing:
 
 ```yaml
 vars:
   snowflake_company_data:
-    snoco_database: MY_PUBLIC_DATA_DB
-    snoco_schema: PUBLIC_DATA_FREE
+    snoco_database: MARKETPLACE_CYBERSYN   # default
+    snoco_schema: PUBLIC_DATA_FREE         # default
 ```
 
-The shipped defaults describe the maintainers' own deployment, which reads a
-daily replica of the share rather than the share itself. If you leave them
-alone you will get a "does not exist or not authorized" error naming a database
-you have never heard of. That is this setting being unset, not a bug.
+If you accepted the suggested database name, there is nothing to configure. If
+you named it something else, which the `CREATE DATABASE ... FROM LISTING`
+statement lets you do, set `snoco_database` to match.
 
-Both layouts work and the package cannot tell them apart, which is the point:
+> **`CYBERSYN` is also a schema in this listing, and it is the wrong one.** It
+> is the older Financial Data Package layout and carries only 6 of the 9 objects
+> this package reads: `COMPANY_CHARACTERISTICS`, `COMPANY_DOMAIN_RELATIONSHIPS`
+> and `SEC_CIK_INDEX` are absent, which is every company attribute, every
+> domain, and all SIC and address data. Use `PUBLIC_DATA_FREE`.
 
 | You read | `snoco_database` | `snoco_schema` |
 |---|---|---|
-| The Marketplace share directly | whatever you named it at `CREATE DATABASE` | `PUBLIC_DATA_FREE` |
+| The share, default name | `MARKETPLACE_CYBERSYN` | `PUBLIC_DATA_FREE` |
+| The share, your own name | whatever you named it | `PUBLIC_DATA_FREE` |
 | Your own replica of it | your database | your schema |
 
 A replica is worth considering. The share exposes secure views whose

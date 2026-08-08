@@ -22,38 +22,41 @@ The slight informality is contained. What consumers pin is `zelloptt/snowflake_c
 
 ---
 
-## Source location defaults to the maintainers' replica, not to a guess
+## Source location defaults to the name Snowflake proposes
 
-Superseded the original decision, which defaulted `snoco_database` to
-`SNOWFLAKE_PUBLIC_DATA_FREE` on the reasoning that it is the name Snowflake's
-own examples use.
+Superseded two earlier positions, both of which were wrong for the same reason:
+they optimised for how *we* read the data rather than for how a consumer does.
 
-That reasoning does not survive contact with the install step. The database name
-is chosen by whoever runs `CREATE DATABASE ... FROM LISTING`, so it is different
-in every account and **there is no default that works unconfigured.** The
-question is therefore not which default is correct, it is which failure is most
-useful, and a plausible-looking default is the worst of the options: it is
-indistinguishable from a permissions problem, and a consumer who has genuinely
-named their database `SNOWFLAKE_PUBLIC_DATA_FREE` gets a package that half-works
-against a schema layout nobody verified.
+The first defaulted `snoco_database` to `SNOWFLAKE_PUBLIC_DATA_FREE` on the
+reasoning that it is the name Snowflake's examples use. The second pointed both
+vars at a private replica, which made an unconfigured public install query a
+relation that exists in exactly one account.
 
-So the defaults describe the deployment we actually run and test against:
-`MARKETPLACE_CYBERSYN.PUBLIC_DATA_FREE`, a daily replica of the ten objects
-this package reads. An unconfigured external install fails immediately, naming a
-database the consumer has never heard of, which reads unambiguously as "you did
-not set this" rather than as a grant problem. The README says so directly.
-
-Not `target.database` either, which is Fivetran's default and right for them
-because Fivetran lands data in the user's own database. Ours is a separate
+The listing suggests `MARKETPLACE_CYBERSYN` at acquisition time, and most people
+accept the suggestion. Defaulting to it means the common case needs no
+configuration at all, and the uncommon case is a one-line override that the
+README shows. Not `target.database`, which is Fivetran's default and right for
+them because Fivetran lands data in the user's own database; ours is a separate
 database whichever layout you use.
+
+**The schema default is `PUBLIC_DATA_FREE`, and this is the part worth reading.**
+The listing exposes two schemas. `CYBERSYN` is the older Financial Data Package
+layout and looks like a reasonable default, especially given the database name.
+It carries 6 of the 9 objects this package reads. The three it lacks are
+`COMPANY_CHARACTERISTICS`, `COMPANY_DOMAIN_RELATIONSHIPS` and `SEC_CIK_INDEX`,
+which between them are every company attribute, every domain, and all SIC and
+address data. A consumer pointed at `CYBERSYN` would get six staging models that
+build and three that fail on a missing object, and the failure names the object
+rather than the schema, so the diagnosis is not obvious. Verified by querying
+both schemas for all nine objects.
 
 Related, and unchanged: `snoco_database` is deliberately not declared in the
 package's `vars:` block. dbt resolves `var('x', default)` to null rather than the
 default when the package declares `x: null`, because the var is then defined.
 Verified still true on dbt-core 1.12.0.
 
-**Revisit if:** Snowflake standardizes the database name at install time, which
-would make a real default possible for the first time.
+**Revisit if:** Snowflake changes the suggested database name, or consolidates
+the two schemas.
 
 ---
 

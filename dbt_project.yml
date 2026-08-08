@@ -31,6 +31,10 @@ vars:
     # ------------------------------------------------------------------
     # Source location
     #
+    # Defaults match what Snowflake proposes when you acquire the listing, so
+    # a consumer who takes the suggested database name gets a package that
+    # works with no configuration at all.
+    #
     # snoco_database is deliberately NOT declared here. If a package declares
     # a var as null in its own dbt_project.yml, var('snoco_database', default)
     # resolves to null rather than falling back, because the var IS defined.
@@ -39,13 +43,14 @@ vars:
     # the user's build database, whether that is the Marketplace share itself
     # or a local replica of it.
     #
-    # Both defaults describe Zello's own deployment, which reads a daily
-    # replica rather than the share directly. EVERY OTHER CONSUMER MUST SET
-    # BOTH. There is no default that works unconfigured, because the share's
-    # database name is chosen at CREATE DATABASE ... FROM LISTING time and is
-    # different in every account. See README "Configure".
+    # The schema is PUBLIC_DATA_FREE and not CYBERSYN. Both schemas exist in
+    # this listing, which is a genuine trap: CYBERSYN is the older Financial
+    # Data Package layout and carries only 6 of the 9 objects this package
+    # reads. COMPANY_CHARACTERISTICS, COMPANY_DOMAIN_RELATIONSHIPS and
+    # SEC_CIK_INDEX are absent from it, which is every company attribute,
+    # every domain, and all SIC and address data. Verified by querying both.
     # ------------------------------------------------------------------
-    snoco_schema: 'SNOWFLAKE_COMPANY_DATA'
+    snoco_schema: 'PUBLIC_DATA_FREE'
 
     # ------------------------------------------------------------------
     # Source relations
