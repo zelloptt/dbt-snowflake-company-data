@@ -341,11 +341,18 @@ the compressed size otherwise drifts between runs.
 | Scaffold, as received (`1e222b8`) | 32 | 32 | 122,880 B | 32,886 B |
 | After hygiene (`1fcdff1`) | 18 | 18 | 102,400 B | 30,559 B |
 | Same tree, `.gitattributes` removed | 19 | 18 | 112,640 B | 31,463 B |
-| **HEAD** | **21** | **5** | **30,720 B** | **9,080 B** |
+| Exclusions in place, before any models | 21 | 5 | 30,720 B | 9,080 B |
+| **HEAD, with the models** | **54** | **36** | **153,600 B** | **32,404 B** |
 
-HEAD tracks more files than the scaffold did, because this audit added three
-documents to `docs/`. None of them ship. That is the point: the repo can grow
-without the install growing.
+The last row is the one that matters, and it is the whole argument in two
+numbers. The repo grew from 21 tracked files to 54. The install grew from 5
+files to 36, and **every one of the 31 added files is a model, a macro, a test
+or a schema definition.** Not one of the 18 non-shipping files added alongside
+them reached a consumer.
+
+Compressed size at HEAD is 32,404 B against the original scaffold's 32,886 B: a
+package that now contains 17 models, 3 macros and 64 tests ships slightly
+smaller than the empty scaffold did.
 
 Attributed honestly: deleting `SETUP.md`, moving `BUILD-PROMPT.md` and dropping
 the `.gitkeep` placeholders accounts for a small part of this. **`.gitattributes`
@@ -363,19 +370,23 @@ dbt_project.yml
 packages.yml
 ```
 
-### The ratio, stated honestly
+### The ratio
 
-By our own definition of functional (what dbt parses), this package is
-currently **83% non-functional by bytes**: 4,005 bytes of `dbt_project.yml` +
-`packages.yml` against 19,217 bytes of `LICENSE` + `README.md` + `CHANGELOG.md`.
+Measured at HEAD, on the same definition used for the reference packages below:
 
-That number is meaningless right now and would be dishonest to quote as a win.
-There is no code yet, and `LICENSE` alone is 11 KB of Apache 2.0 boilerplate
-that we are required to ship. The point is the shape rather than the ratio:
-the non-functional part is a fixed ~19 KB floor that grows only as the README
-and changelog grow, while `integration_tests/` is the part that would have
-grown without bound. In `fivetran/hubspot` it reached 514 KB, and it is not
-even that package's biggest problem.
+```
+  functional        84.1 KB
+  non-functional    23.9 KB   (22%)
+```
+
+An earlier revision of this file recorded 83% non-functional and said the number
+was meaningless, which it was: there was no code, and `LICENSE` alone is 11 KB
+of Apache 2.0 boilerplate we are required to ship. Now that the models exist the
+ratio means something, and the shape is what was predicted. The non-functional
+part is a near-fixed floor (licence, README, changelog) that grows only as the
+prose grows. Everything else added since has been functional.
+
+For comparison, the four reference packages sit between 63% and 92%.
 
 ### Against the reference packages
 
@@ -390,7 +401,7 @@ development concern.
 | `fivetran/hubspot` 1.9.1 | 1,067 KB | 7,129 KB | 571 KB | **92%** | 458 | **docs 5,894 KB**, integration_tests 514 KB |
 | `dbt-labs/dbt_project_evaluator` 1.3.4 | 91 KB | 370 KB | 137 KB | **63%** | 347 | docs 89 KB, integration_tests 50 KB |
 | `brooklyn-data/dbt_artifacts` 2.11.0 | 543 KB | 1,112 KB | 320 KB | **71%** | 199 | docs 426 KB, uv.lock 191 KB |
-| **`zelloptt/snowflake_company_data`** | **8.9 KB** | **30 KB** | **4 KB** | 83% (see above) | **5** | LICENSE 11 KB (required) |
+| **`zelloptt/snowflake_company_data`** | **32 KB** | **108 KB** | **84 KB** | **22%** | **36** | LICENSE 11 KB (required) |
 
 These percentages differ somewhat from the ones in the original handoff
 because they are computed from the published tarball rather than the repo, and
