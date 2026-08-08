@@ -340,8 +340,12 @@ the compressed size otherwise drifts between runs.
 |---|---|---|---|---|
 | Scaffold, as received (`1e222b8`) | 32 | 32 | 122,880 B | 32,886 B |
 | After hygiene (`1fcdff1`) | 18 | 18 | 102,400 B | 30,559 B |
-| HEAD with `.gitattributes` removed | 19 | 18 | 112,640 B | 31,463 B |
-| **HEAD** | **19** | **5** | **30,720 B** | **8,788 B** |
+| Same tree, `.gitattributes` removed | 19 | 18 | 112,640 B | 31,463 B |
+| **HEAD** | **21** | **5** | **30,720 B** | **9,080 B** |
+
+HEAD tracks more files than the scaffold did, because this audit added three
+documents to `docs/`. None of them ship. That is the point: the repo can grow
+without the install growing.
 
 Attributed honestly: deleting `SETUP.md`, moving `BUILD-PROMPT.md` and dropping
 the `.gitkeep` placeholders accounts for a small part of this. **`.gitattributes`
@@ -386,7 +390,7 @@ development concern.
 | `fivetran/hubspot` 1.9.1 | 1,067 KB | 7,129 KB | 571 KB | **92%** | 458 | **docs 5,894 KB**, integration_tests 514 KB |
 | `dbt-labs/dbt_project_evaluator` 1.3.4 | 91 KB | 370 KB | 137 KB | **63%** | 347 | docs 89 KB, integration_tests 50 KB |
 | `brooklyn-data/dbt_artifacts` 2.11.0 | 543 KB | 1,112 KB | 320 KB | **71%** | 199 | docs 426 KB, uv.lock 191 KB |
-| **`zelloptt/snowflake_company_data`** | **8.6 KB** | **30 KB** | **4 KB** | 83% (see above) | **5** | LICENSE 11 KB (required) |
+| **`zelloptt/snowflake_company_data`** | **8.9 KB** | **30 KB** | **4 KB** | 83% (see above) | **5** | LICENSE 11 KB (required) |
 
 These percentages differ somewhat from the ones in the original handoff
 because they are computed from the published tarball rather than the repo, and
