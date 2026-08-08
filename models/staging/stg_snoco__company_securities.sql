@@ -15,6 +15,6 @@ select
     cast(security_id      as {{ dbt.type_string() }}) as security_id,
     cast(security_name    as {{ dbt.type_string() }}) as security_name
 
-from {{ source('snoco', 'company_security_relationships') }}
+from {{ var('snoco_company_security_relationships') }}
 where company_id is not null
   and security_id is not null

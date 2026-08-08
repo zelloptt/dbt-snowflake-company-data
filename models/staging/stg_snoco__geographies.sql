@@ -15,5 +15,5 @@ select
     cast(iso_alpha3       as {{ dbt.type_string() }}) as iso_alpha3,
     cast(iso_3166_2_code  as {{ dbt.type_string() }}) as iso_3166_2_code
 
-from {{ source('snoco', 'geography_index') }}
+from {{ var('snoco_geography_index') }}
 where geo_id is not null

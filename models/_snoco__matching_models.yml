@@ -11,7 +11,7 @@ models:
       configured.
     columns:
       - name: match_input_id
-        description: Your identifier, from snoco__match_id_column.
+        description: "{{ doc('snoco_match_input_id') }}"
         data_tests:
           - not_null
       - name: company_id

@@ -13,7 +13,7 @@ Turn Snowflake's free public company data into a modeling layer you can actually
 
 ## Why This Exists
 
-Snowflake gives away a reference spine of roughly 100,000 public and private companies, plus SEC filings, security identifiers, and geography, at no cost through the Marketplace. The data is genuinely useful and the raw shape is genuinely awkward:
+Snowflake gives away a reference spine of **2.9 million** public and private companies, plus SEC filings, security identifiers, and geography, at no cost through the Marketplace. The data is genuinely useful and the raw shape is genuinely awkward:
 
 - Company attributes are stored **entity-attribute-value**, so industry classification is a row filter, not a column.
 - Some identifiers are **ARRAY-typed**, so a company can carry several LEIs and a naive join fans out.

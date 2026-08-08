@@ -36,5 +36,5 @@ select
     cast(state_geo_id           as {{ dbt.type_string() }}) as state_geo_id,
     cast(phone_number           as {{ dbt.type_string() }}) as phone_number
 
-from {{ source('snoco', 'sec_cik_index') }}
+from {{ var('snoco_sec_cik_index') }}
 where cik is not null

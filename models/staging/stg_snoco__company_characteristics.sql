@@ -13,6 +13,6 @@ select
     cast(value                   as {{ dbt.type_string() }}) as attribute_value,
     cast(relationship_start_date as date)                    as observed_from_date
 
-from {{ source('snoco', 'company_characteristics') }}
+from {{ var('snoco_company_characteristics') }}
 where company_id is not null
   and relationship_type is not null

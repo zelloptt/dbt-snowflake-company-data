@@ -12,7 +12,7 @@ models:
       employee count and no revenue anywhere in the free share.
     columns:
       - name: company_id
-        description: Opaque 24-character company key. Primary key.
+        description: "{{ doc('snoco_company_id') }}"
         data_tests:
           - unique
           - not_null
@@ -25,11 +25,11 @@ models:
       - name: legal_structure
         description: Legal form, e.g. Corporation, Limited Liability Company.
       - name: ein
-        description: US Employer Identification Number.
+        description: "{{ doc('snoco_ein') }}"
       - name: cik
-        description: SEC Central Index Key.
+        description: "{{ doc('snoco_cik') }}"
       - name: permid_company_id
-        description: Refinitiv PermID.
+        description: "{{ doc('snoco_permid_company_id') }}"
       - name: primary_ticker
         description: Primary exchange ticker.
       - name: sic_code
@@ -98,7 +98,7 @@ models:
                 to: ref('snoco__companies')
                 field: company_id
       - name: domain
-        description: Bare registrable domain.
+        description: "{{ doc('snoco_domain') }}"
         data_tests:
           - not_null
       - name: companies_sharing_domain

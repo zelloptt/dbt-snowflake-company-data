@@ -20,4 +20,4 @@ select
     cast(primary_exchange_code as {{ dbt.type_string() }}) as primary_exchange_code,
     cast(primary_exchange_name as {{ dbt.type_string() }}) as primary_exchange_name
 
-from {{ source('snoco', 'company_index') }}
+from {{ var('snoco_company_index') }}

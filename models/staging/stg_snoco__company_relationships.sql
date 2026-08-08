@@ -13,7 +13,7 @@ select
     cast(relationship_type    as {{ dbt.type_string() }}) as relationship_type,
     cast(relationship_start_date as date)                 as observed_from_date
 
-from {{ source('snoco', 'company_relationships') }}
+from {{ var('snoco_company_relationships') }}
 where company_id is not null
   and related_company_id is not null
   -- a self-edge would make the recursive hierarchy loop forever

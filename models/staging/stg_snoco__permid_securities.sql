@@ -16,5 +16,5 @@ select
     permid_quote_id                                         as quote_id_array,
     global_tickers                                          as global_tickers_array
 
-from {{ source('snoco', 'permid_security_index') }}
+from {{ var('snoco_permid_security_index') }}
 where permid_security_id is not null

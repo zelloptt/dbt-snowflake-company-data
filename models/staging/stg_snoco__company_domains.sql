@@ -14,7 +14,7 @@ with source as (
         cast(domain_id  as {{ dbt.type_string() }}) as domain_raw,
         cast(relationship_start_date as date)       as observed_from_date
 
-    from {{ source('snoco', 'company_domain_relationships') }}
+    from {{ var('snoco_company_domain_relationships') }}
     where company_id is not null
       and domain_id is not null
 

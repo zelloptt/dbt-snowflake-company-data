@@ -18,6 +18,18 @@ Initial release. Not yet published to the dbt Package Hub.
 - 64 tests, including guards for the three source defects that are silent
   otherwise: oversized identifier arrays, hierarchy recursion truncation, and
   un-normalised similarity scores.
+- Doc blocks for the columns that repeat across models, so `company_id` and
+  friends are described once.
+
+## Under the Hood
+
+- Layout now matches the shape the ecosystem has settled on: marts at the root
+  of `models/`, with `staging/` and `intermediate/` beneath. Anything at the
+  root is a model this package publishes.
+- Each source object is addressable by a var (`snoco_company_index` and so on)
+  defaulting to its `source()` call, so any single table can be repointed at a
+  seed or another relation without touching package code. Lineage is unchanged.
+
 
 ## Under the Hood
 

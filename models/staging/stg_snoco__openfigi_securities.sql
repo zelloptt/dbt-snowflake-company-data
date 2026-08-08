@@ -20,5 +20,5 @@ select
     openfigi_share_class_id                                     as share_class_id_array,
     exchange_codes                                              as exchange_codes_array
 
-from {{ source('snoco', 'openfigi_security_index') }}
+from {{ var('snoco_openfigi_security_index') }}
 where top_level_openfigi_id is not null

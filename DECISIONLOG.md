@@ -255,6 +255,72 @@ vanishing. The count above is the thing to watch.
 
 ---
 
+## Layout follows the Fivetran shape: marts at the root of `models/`
+
+Reviewed `fivetran/dbt_google_ads` v1.4.0, which is as close to a reference
+implementation as the ecosystem has. Its layout is `models/<mart>.sql` at the
+root, with `models/staging/`, `models/staging/tmp/` and `models/intermediate/`
+beneath. We had marts in `models/companies/` and `models/matching/`.
+
+Adopted the flat-marts layout. The rule it encodes is worth having: **anything
+at the root of `models/` is a model this package publishes and a consumer may
+reference; everything in a subdirectory is plumbing.** Grouping marts by theme
+looked tidier and told a reader nothing they could act on. Nothing was lost in
+the move, because the matching models were already gated by `config(enabled=)`
+rather than by a directory-level config.
+
+`int_snoco__match_input` moved from `models/matching/` to
+`models/intermediate/`, where it always belonged. It is ephemeral and it is a
+staging step for the matching models, not something a consumer selects.
+
+**Not adopted: `models/staging/tmp/`.** Fivetran's tmp layer exists to give
+`fill_staging_columns` a relation whose columns it can introspect, and to union
+several connector schemas into one staging model. We do neither. There is one
+share, every consumer reads the same objects, and ground rule 7 rejects the
+schema-drift shim outright. A tmp layer here would be indirection with nothing
+on the other end.
+
+**Not adopted: materialising staging as tables.** Fivetran does, and is right
+to: their staging unpacks, casts and back-fills missing columns, so it is real
+work worth persisting once. Ours is a rename and a cast over a source that is
+already a table, so a second copy of 16M rows would earn nothing.
+
+**Revisit if:** the package ever reads more than one source layout, which is
+the condition that makes a tmp layer pay for itself.
+
+---
+
+## Source relations are vars, one per object
+
+Also taken from the Fivetran packages. Every source object gets a var whose
+default is the `source()` call:
+
+```yaml
+snoco_company_index: "{{ source('snoco', 'company_index') }}"
+```
+
+Models read `{{ var('snoco_company_index') }}` rather than `source()` directly.
+A consumer, or the integration test project, can then repoint any single table
+at any relation without touching package code. That is the mechanism that lets
+integration tests run against synthetic seeds, which ground rule 8 requires and
+which was an open gap.
+
+Chosen over passing table identifiers, which was the original plan and is
+weaker: an identifier cannot express a table in a different database, a view, or
+a seed, and all three are things a test or a consumer legitimately wants.
+
+Verified rather than assumed, because it looks like it should break lineage:
+the `source()` call is rendered in the consuming model's context, so dbt still
+records `source.snowflake_company_data.snoco.<table>` in the model's
+`depends_on`. Checked the manifest; the DAG is identical to a direct `source()`
+reference. Source freshness and `--select source:snoco+` keep working.
+
+The `identifier:` overrides that previously sat on each source table were
+removed in the same change. They did the same job less well, and two mechanisms
+for one thing is worse than either.
+
+---
+
 ## No `fill_staging_columns` / schema-drift shim
 
 Fivetran's staging pattern emits `cast(null as <type>) as <column>` when an expected column is missing, so downstream models always compile. That trade makes sense for them: a hard failure across thousands of tenants with per-tenant schema variance is worse than a silently null column.

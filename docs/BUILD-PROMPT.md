@@ -63,7 +63,7 @@ These are non-negotiable. Violating any of them means rework later.
 
 8. **No data in the repo.** The package ships SQL, not data. Any seed derived from the share would be redistribution and our license does not cover it. Integration test fixtures must be synthetic. A SIC code reference seed is fine, because SIC is a US government classification standard, not vendor data.
 
-9. **Views by default in staging, tables only where real work happens.** dbt's official package guidance is to default to views. The company spine is roughly 100K rows; do not materialize tables you do not need.
+9. **Views by default in staging, tables only where real work happens.** dbt's official package guidance is to default to views. Note the spine is **2.9M rows, not the ~100K this document originally assumed** (measured; see `docs/DISCOVERY.md`). The conclusion is unchanged but the reason is different: staging here is a rename and a cast over an already-materialised source, so a table would be a second copy earning nothing. Materialise where work happens, which is the marts.
 
 ---
 
@@ -370,7 +370,7 @@ Give every mart a `_key` surrogate column where the grain is composite, and test
 
 # 7. Phase 5: Matching layer
 
-Disabled by default via `snoco_matching_enabled: false`, because it requires the user to point it at their own data. Every model in `models/matching/` gets `{{ config(enabled=snoco_enabled_vars(['snoco_matching_enabled'])) }}`.
+Disabled by default via `snoco_matching_enabled: false`, because it requires the user to point it at their own data. Every matching model gets `{{ config(enabled = var('snoco_matching_enabled', false)) }}`. Note there is no `models/matching/` directory: marts live at the root of `models/`, following the layout Fivetran's packages use. See `DECISIONLOG.md`.
 
 Configuration surface: `snoco__match_source` takes a relation string the user supplies (a `ref` or `source` expression), plus column mapping vars for name, domain, ticker, country, and their own row id.
 

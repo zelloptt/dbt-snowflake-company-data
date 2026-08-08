@@ -39,12 +39,31 @@ vars:
     snoco_schema: 'SNOWFLAKE_COMPANY_DATA'
 
     # ------------------------------------------------------------------
-    # Source table identifiers
-    # Generated from live introspection. See docs/DISCOVERY.md.
-    # These exist so the integration test project can repoint every source
-    # at a seed without touching package code.
+    # Source relations
+    #
+    # One var per source object, each defaulting to the declared source. Any
+    # single table can be repointed at an arbitrary relation without touching
+    # package code, which is what lets the integration test project swap every
+    # source for a synthetic seed.
+    #
+    # This is the pattern Fivetran's packages use, and the reason to copy it
+    # rather than pass identifiers is that a whole relation covers the cases an
+    # identifier cannot: a table in a different database, a view, a seed.
+    #
+    # Verified, because it looks like it should break lineage and does not: the
+    # source() call is rendered in the consuming model's context, so dbt still
+    # records source.snowflake_company_data.snoco.<table> in depends_on. The
+    # DAG is identical to a direct source() reference.
     # ------------------------------------------------------------------
-    # snoco_company_index_identifier: 'company_index'
+    snoco_company_index:                 "{{ source('snoco', 'company_index') }}"
+    snoco_company_characteristics:       "{{ source('snoco', 'company_characteristics') }}"
+    snoco_company_domain_relationships:  "{{ source('snoco', 'company_domain_relationships') }}"
+    snoco_company_relationships:         "{{ source('snoco', 'company_relationships') }}"
+    snoco_company_security_relationships: "{{ source('snoco', 'company_security_relationships') }}"
+    snoco_sec_cik_index:                 "{{ source('snoco', 'sec_cik_index') }}"
+    snoco_openfigi_security_index:       "{{ source('snoco', 'openfigi_security_index') }}"
+    snoco_permid_security_index:         "{{ source('snoco', 'permid_security_index') }}"
+    snoco_geography_index:               "{{ source('snoco', 'geography_index') }}"
 
     # ------------------------------------------------------------------
     # Enablement flags (single underscore)
@@ -94,16 +113,26 @@ vars:
     # ------------------------------------------------------------------
     deactivate_for_fusion: false
 
+# Layout follows the shape the ecosystem has settled on, most visibly in
+# Fivetran's packages: marts live directly in models/, staging and intermediate
+# in subdirectories. Anything at the root of models/ is a model this package
+# publishes and a consumer may reference; everything below it is plumbing.
+#
+# No models/staging/tmp/ layer. Fivetran's exists to give
+# fill_staging_columns a relation to introspect and to union multiple
+# connectors. We do neither: there is one share, every consumer reads the same
+# objects, and CLAUDE.md ground rule 7 rejects the schema-drift shim outright.
+# A tmp layer here would be indirection with nothing on the other end.
 models:
   snowflake_company_data:
     +materialized: table
     +schema: snowflake_company_data
     staging:
+      # Views, not tables. Fivetran materialises staging because theirs unpacks,
+      # casts and back-fills missing columns. Ours is a rename and a cast over a
+      # source that is already materialised, so a table would be a second copy
+      # of 16M rows earning nothing.
       +materialized: view
       +schema: stg_snowflake_company_data
     intermediate:
       +materialized: ephemeral
-    companies:
-      +materialized: table
-    matching:
-      +materialized: table

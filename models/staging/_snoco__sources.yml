@@ -38,23 +38,22 @@ sources:
 
     tables:
       - name: company_index
-        identifier: "{{ var('snoco_company_index_identifier', 'company_index') }}"
         description: >
           One row per company. The spine everything else hangs off. 2.9M rows,
           unique on company_id, covering public and private entities.
         columns:
           - name: company_id
-            description: Opaque 24-character company key. Stable across refreshes.
+            description: "{{ doc('snoco_company_id') }}"
           - name: company_name
-            description: Company name as carried on the index.
+            description: "{{ doc('snoco_company_name') }}"
           - name: entity_level
             description: >
               Constant 'Corporate' on every row. Carries no information and is
               not surfaced downstream.
           - name: ein
-            description: US Employer Identification Number. Populated on ~10% of rows.
+            description: "{{ doc('snoco_ein') }}"
           - name: cik
-            description: SEC Central Index Key. Populated on ~24% of rows.
+            description: "{{ doc('snoco_cik') }}"
           - name: lei
             description: >
               ARRAY of Legal Entity Identifiers. Populated on ~2% of rows. A
@@ -62,7 +61,7 @@ sources:
               largest holding 5,287 entries carried verbatim by 47 different
               companies; see docs/DISCOVERY.md trap 1.
           - name: permid_company_id
-            description: Refinitiv PermID. Populated on ~97% of rows.
+            description: "{{ doc('snoco_permid_company_id') }}"
           - name: primary_ticker
             description: Primary exchange ticker. Populated on ~0.7% of rows.
           - name: primary_exchange_code
@@ -75,14 +74,13 @@ sources:
               with openfigi_security_index.global_tickers, which is populated.
 
       - name: company_characteristics
-        identifier: "{{ var('snoco_company_characteristics_identifier', 'company_characteristics') }}"
         description: >
           Entity-attribute-value attributes per company, 11.7M rows across 15
           relationship_type values. Not unique on (company_id,
           relationship_type): ~1,900 companies carry multiple lei values.
         columns:
           - name: company_id
-            description: Foreign key to company_index.
+            description: "{{ doc('snoco_company_id') }}"
           - name: relationship_type
             description: >
               The attribute name. One of 15 values: company_name,
@@ -99,32 +97,29 @@ sources:
               on it to get "current" values is a no-op.
 
       - name: company_domain_relationships
-        identifier: "{{ var('snoco_company_domain_relationships_identifier', 'company_domain_relationships') }}"
         description: >
           Company to owned web domain, 319K rows. Already normalised: no scheme,
           no www., no path. Many-to-many, so neither side is unique.
         columns:
           - name: company_id
-            description: Foreign key to company_index.
+            description: "{{ doc('snoco_company_id') }}"
           - name: domain_id
             description: Bare registrable domain, e.g. `sf-express.com`.
 
       - name: company_relationships
-        identifier: "{{ var('snoco_company_relationships_identifier', 'company_relationships') }}"
         description: >
           Parent and subsidiary edges. 848 rows total, being the same 424
           relationships stored in both directions. Coverage of the 2.9M spine is
           about 0.015%, so treat the hierarchy as a bonus rather than a feature.
         columns:
           - name: company_id
-            description: Foreign key to company_index.
+            description: "{{ doc('snoco_company_id') }}"
           - name: related_company_id
             description: The other end of the edge.
           - name: relationship_type
             description: 'Parent or Subsidiary. Each edge appears under both.'
 
       - name: company_security_relationships
-        identifier: "{{ var('snoco_company_security_relationships_identifier', 'company_security_relationships') }}"
         description: >
           Company to the securities it issues, 986K rows. security_id is
           type-qualified: its meaning depends on security_id_type, and four of
@@ -132,7 +127,7 @@ sources:
           ARRAY_CONTAINS rather than equality.
         columns:
           - name: company_id
-            description: Foreign key to company_index.
+            description: "{{ doc('snoco_company_id') }}"
           - name: security_id_type
             description: >
               One of openfigi_figi_id, openfigi_composite_id,
@@ -141,14 +136,13 @@ sources:
             description: The identifier value, interpreted per security_id_type.
 
       - name: sec_cik_index
-        identifier: "{{ var('snoco_sec_cik_index_identifier', 'sec_cik_index') }}"
         description: >
           SEC filer registry, 981K rows, unique on cik rather than company_id.
           281,823 rows (28.7%) have a NULL company_id and cannot be joined to
           the spine at all. The richest source of address and SIC industry.
         columns:
           - name: cik
-            description: SEC Central Index Key. The unique key of this object.
+            description: "{{ doc('snoco_cik') }}"
           - name: company_id
             description: >
               Foreign key to company_index, NULL on 28.7% of rows. Joining on
@@ -164,15 +158,12 @@ sources:
             description: SIC code description.
 
       - name: openfigi_security_index
-        identifier: "{{ var('snoco_openfigi_security_index_identifier', 'openfigi_security_index') }}"
         description: OpenFIGI security reference, 119K rows. Several ARRAY-typed identifier columns.
 
       - name: permid_security_index
-        identifier: "{{ var('snoco_permid_security_index_identifier', 'permid_security_index') }}"
         description: PermID security reference, 26K rows.
 
       - name: geography_index
-        identifier: "{{ var('snoco_geography_index_identifier', 'geography_index') }}"
         description: >
           Geographic entity index, 573K rows from country down to census block
           group, with ISO codes. Resolves the *_geo_id columns on sec_cik_index.
