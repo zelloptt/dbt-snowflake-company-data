@@ -44,6 +44,45 @@ Shipping freshness on by default would produce confident, wrong answers. It is a
 
 ---
 
+## Development files are excluded from the distribution archive
+
+A dbt package is installed into other people's projects. A Package Hub install
+resolves the version from the registry, downloads GitHub's source tarball for
+that tag, and untars it directly into the consumer's `dbt_packages/`. Those
+tarballs are `git archive` output, so `export-ignore` in `.gitattributes`
+decides what a consumer receives.
+
+We measured four widely-used published packages and 59% to 81% of their
+shipped bytes are not functional package code: `integration_tests/`,
+`.github/`, and in `fivetran/dbt_hubspot`'s case 5.9 MB of committed
+`catalog.json` / `manifest.json` / `index.html`. None of the four ships a
+`.gitattributes`. This is an unsolved gap in ecosystem practice rather than a
+convention we are breaking.
+
+So `integration_tests/`, `.github/`, `docs/`, and the contributor-facing
+markdown are `export-ignore`d. `dbt_project.yml`, `packages.yml`, the
+configured resource paths, `LICENSE`, `README.md`, and `CHANGELOG.md` ship.
+Doing this before any models exist was deliberate: the install surface is much
+harder to shrink once consumers depend on it.
+
+**The tradeoff we are accepting:** someone who clicks "Download source" on a
+GitHub release, or fetches the codeload tarball by hand, gets a package with no
+tests in it. That is the same artifact dbt installs, so it is the correct thing
+for it to contain, but it will surprise anyone who expects a source archive to
+be the source. Cloning and forking are unaffected and still deliver everything.
+
+A second, smaller cost: a `git:` install clones rather than downloading the
+archive, so it ignores `export-ignore` entirely and delivers the full
+repository. Hub installs are the majority and are what the README recommends,
+so we accept the inconsistency rather than duplicating the exclusion list into
+a mechanism that would also apply to clones.
+
+**Revisit if:** GitHub changes the source-tarball endpoint to stop honouring
+`export-ignore`, or dbt starts installing hub packages by clone. Either would
+silently un-do this, so `docs/INSTALL_FOOTPRINT.md` records how to re-test it.
+
+---
+
 ## No `fill_staging_columns` / schema-drift shim
 
 Fivetran's staging pattern emits `cast(null as <type>) as <column>` when an expected column is missing, so downstream models always compile. That trade makes sense for them: a hard failure across thousands of tenants with per-tenant schema variance is worse than a silently null column.
