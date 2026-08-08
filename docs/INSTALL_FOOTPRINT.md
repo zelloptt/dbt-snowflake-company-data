@@ -205,7 +205,7 @@ The dev install reads the working tree directly and sees every
 alongside the integration project's own. **VERIFIED: `.gitattributes` cannot
 break local development.**
 
-### 1.7 `.dbtignore` — the assumption we started with was wrong
+### 1.7 `.dbtignore`: the assumption we started with was wrong
 
 The hypothesis was that `.dbtignore` "does not clearly apply to installed
 packages." It does apply, and it is scoped per-project.
@@ -227,7 +227,7 @@ nodes: ['model.consumer.my_model']
 VERDICT: package .dbtignore SUPPRESSED the package model
 ```
 
-The converse also holds — a `.dbtignore` at the **consumer's** root does *not*
+The converse also holds. A `.dbtignore` at the **consumer's** root does *not*
 reach into `dbt_packages/`:
 
 ```
@@ -349,7 +349,7 @@ without the install growing.
 
 Attributed honestly: deleting `SETUP.md`, moving `BUILD-PROMPT.md` and dropping
 the `.gitkeep` placeholders accounts for a small part of this. **`.gitattributes`
-alone takes 18 shipped files to 5, and 112,640 bytes to 30,720 — a 73%
+alone takes 18 shipped files to 5, and 112,640 bytes to 30,720, a 73%
 reduction on its own.** Against the original scaffold the total is 84% fewer
 files and 75% fewer bytes.
 
@@ -431,6 +431,6 @@ curl -sL https://codeload.github.com/zelloptt/dbt-snowflake-company-data/tar.gz/
 ```
 
 It should list the shipping set and nothing else. This has not been run
-against a real tag yet, because no tag exists — that is the one claim in this
+against a real tag yet, because no tag exists. That is the one claim in this
 document confirmed only by proxy (guzzle) and by local `git archive`, not
 against our own published artifact. **Run it at the first release.**
