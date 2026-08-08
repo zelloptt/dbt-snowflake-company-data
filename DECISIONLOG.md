@@ -321,6 +321,93 @@ for one thing is worse than either.
 
 ---
 
+## The dbt floor is a tested claim, not a preference
+
+`require-dbt-version` was `[">=1.10.0", "<3.0.0"]` from the scaffold onward, and
+an earlier audit passed it because the *syntax* is valid. That was the wrong
+check. The package's generic tests nest arguments under `arguments:`, which dbt
+only accepts once `require_generic_test_arguments_property` defaults true, and
+that happened in 1.10.8. Measured: 1.10.7 fails to parse with
+
+```
+macro 'dbt_macro__test_relationships' takes no keyword argument 'arguments'
+```
+
+and 1.10.8 is clean. The old floor advertised support for eight patch releases
+the package does not work on, and the failure a consumer got was a macro error
+naming an internal dbt macro rather than anything about versions.
+
+Raised to `>=1.10.8`. dbt now rejects 1.10.7 with "This version of dbt is not
+supported with the 'snowflake_company_data' package", which is the message
+someone can act on.
+
+**The general lesson, worth more than the fix:** a version bound is a claim
+about behaviour. Checking that it parses tests the string, not the claim. Any
+future change to either bound needs a run on the boundary versions.
+
+**Revisit if:** the package stops using `arguments:`, which would lower the real
+floor back to whatever the next-oldest constraint is.
+
+---
+
+## Domain normalisation lowercases first, and lives in one macro
+
+Snowflake's `REGEXP_REPLACE` is case-sensitive by default. The domain
+normalisation applied `lower()` around the outside of the scheme and `www.`
+strips, so `WWW.Acme.com` became `www.acme.com` rather than `acme.com` and then
+matched nothing on the deterministic domain join.
+
+Silent in the worst way: the value looks normalised, the model builds, the tests
+pass, and matching just quietly under-returns. CRM exports are full of
+capitalised hostnames, so this was the common case rather than an edge case.
+
+The logic was also duplicated between `stg_snoco__company_domains` and
+`int_snoco__match_input`, and was wrong in both. It is now the
+`normalize_domain` macro, which is the actual fix: one place to be right.
+
+**Revisit if:** never. Extract the shared thing the first time you copy it.
+
+---
+
+## Reference deduplication picks one row, never one value per column
+
+`snoco__company_securities` collapsed multiple reference rows per security with
+`max()` on each column independently. Every value it returned was real and the
+combination was not: the name from one row, the asset class from another, the
+ticker from a third.
+
+Measured on the current share: 10,278 identifier keys appear in more than one
+reference row and 10,068 of those disagree on at least one attribute. Comparing
+the two implementations directly, independent `max()` produced 112 rows matching
+no real reference row at all; `row_number()`/`qualify` produces zero.
+
+The ordering prefers the most completely populated row, then breaks ties on the
+values so the result is stable across runs.
+
+**The general rule:** aggregating columns independently to force a grain
+fabricates rows whenever the source disagrees. If the answer is "one of these
+rows", say that with `row_number()`, not with per-column aggregates.
+
+---
+
+## A test that always fires is not a test
+
+`assert_snoco__lei_arrays_within_guard` warned whenever any company had an
+oversized LEI array. The share always has about 230, so it warned on every build
+in every consumer's project, for a provider defect nobody can fix. Anyone
+running `--warn-error` got a hard failure on install.
+
+Replaced with a drift check: `snoco__expected_oversized_lei_arrays` (230) and
+`snoco__oversized_lei_array_tolerance` (50). Silent while the count sits where
+we measured it, speaks up if the provider fixes the bug or makes it worse, which
+are the only two states worth a human's attention. Setting the baseline to 0
+restores "warn if any exist" for anyone who wants it.
+
+Still `warn` rather than `error`: it is provider data we do not control, and
+drift is a reason to look, not a reason to break someone's build.
+
+---
+
 ## No `fill_staging_columns` / schema-drift shim
 
 Fivetran's staging pattern emits `cast(null as <type>) as <column>` when an expected column is missing, so downstream models always compile. That trade makes sense for them: a hard failure across thousands of tenants with per-tenant schema variance is worse than a silently null column.

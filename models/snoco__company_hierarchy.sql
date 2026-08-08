@@ -29,7 +29,13 @@
 -- source prevents a cycle, and a cycle in a recursive CTE does not error, it
 -- runs until the warehouse gives up.
 
-with edges as (
+-- `with recursive` and the explicit column list on `tree` are both required by
+-- Snowflake's documented syntax for recursive CTEs. Snowflake currently accepts
+-- the anchor/recursive form without either (verified: it compiles and the
+-- recursive branch executes), but relying on undocumented tolerance in a
+-- package other people install is not a trade worth taking, and the explicit
+-- form costs one line.
+with recursive edges as (
 
     select * from {{ ref('int_snoco__company_edges') }}
 
@@ -44,7 +50,7 @@ roots as (
 
 ),
 
-tree as (
+tree (company_id, parent_company_id, root_company_id, depth, hierarchy_path) as (
 
     select
         company_id,

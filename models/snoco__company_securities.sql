@@ -98,20 +98,44 @@ security_lookup as (
 
 ),
 
--- A FIGI can appear under more than one reference row. Collapse to one row per
--- (type, value) so the join below cannot change the grain of the fact table.
+-- A FIGI can appear under more than one reference row, so this collapses to one
+-- row per (type, value) to stop the join below changing the grain of the fact
+-- table.
+--
+-- It picks ONE COMPLETE ROW rather than aggregating each column independently.
+-- The obvious version, max() per column grouped by the key, silently fabricates
+-- a security that does not exist: it takes the name from one reference row, the
+-- asset class from another and the ticker from a third, and every individual
+-- value is real while the combination never occurred.
+--
+-- That is not a hypothetical. Measured on the current share: 10,278 keys appear
+-- in more than one reference row, and 10,068 of them disagree on at least one
+-- attribute. Independent max() would invent a blended row for essentially all
+-- of them.
+--
+-- The ordering prefers the most completely populated row, then breaks ties on
+-- the values themselves so repeated runs return the same answer instead of
+-- whatever the scan produced.
 security_lookup_deduplicated as (
 
     select
         security_id_type,
         security_id,
-        max(security_name)   as reference_security_name,
-        max(asset_class)     as asset_class,
-        max(primary_ticker)  as primary_ticker,
-        max(exchange_code)   as exchange_code
+        security_name as reference_security_name,
+        asset_class,
+        primary_ticker,
+        exchange_code
     from security_lookup
     where security_id is not null
-    group by security_id_type, security_id
+    qualify row_number() over (
+        partition by security_id_type, security_id
+        order by
+            (case when security_name  is not null then 1 else 0 end
+           + case when asset_class    is not null then 1 else 0 end
+           + case when primary_ticker is not null then 1 else 0 end
+           + case when exchange_code  is not null then 1 else 0 end) desc,
+            security_name, asset_class, primary_ticker, exchange_code
+    ) = 1
 
 )
 

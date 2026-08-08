@@ -3,9 +3,10 @@ version: 2
 sources:
   - name: snoco
     description: >
-      Snowflake Public Data (Free), Marketplace listing GZTSZ290BV255. Ten of the
-      ~370 objects in the share: the company graph, the SEC filer index, the two
-      security indexes, and the geography and NAICS lookups.
+      Snowflake Public Data (Free), Marketplace listing GZTSZ290BV255. Nine of
+      the ~370 objects in the share: the company graph, the SEC filer index, the
+      two security indexes, and the geography lookup. NAICS is deliberately not
+      among them; see the note at the end of this file.
 
       Location is entirely var-driven, because the share's database name is
       chosen at `CREATE DATABASE ... FROM LISTING` time and differs in every

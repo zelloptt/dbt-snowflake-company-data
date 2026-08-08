@@ -21,8 +21,35 @@ Initial release. Not yet published to the dbt Package Hub.
 - Doc blocks for the columns that repeat across models, so `company_id` and
   friends are described once.
 
+## Bug Fixes
+
+- **`require-dbt-version` floor raised from `>=1.10.0` to `>=1.10.8`.** The
+  package's generic tests nest under `arguments:`, which fails on 1.10.0 through
+  1.10.7 with `macro 'dbt_macro__test_relationships' takes no keyword argument
+  'arguments'`. The old floor advertised support for versions the package does
+  not work on. **If you are on dbt below 1.10.8 this package now refuses to
+  install, with a message that says so, instead of failing to parse.**
+- **Uppercase domains no longer fail deterministic matching.** Domain
+  normalisation stripped `www.` before lowercasing, and Snowflake's
+  `REGEXP_REPLACE` is case-sensitive, so `WWW.Acme.com` normalised to
+  `www.acme.com` and matched nothing. Affected `snoco__company_domains` and the
+  matching layer. Now a single `normalize_domain` macro used by both.
+- **`snoco__company_securities` no longer fabricates reference rows.** Attributes
+  were aggregated per column with `max()`, so a security whose identifier
+  appeared in several reference rows could come back with a name, asset class
+  and ticker taken from different rows. 10,068 keys have conflicting reference
+  rows; the old approach produced 112 combinations that exist nowhere in the
+  source. Now one complete row is chosen deterministically.
+- **The LEI guard no longer warns on every build.** It fired for any oversized
+  array, and the share always contains about 230, so every consumer got a
+  permanent warning and `--warn-error` users got a build failure. It now warns
+  only on drift from `snoco__expected_oversized_lei_arrays`.
+
 ## Under the Hood
 
+- `snoco__company_hierarchy` uses `with recursive` and an explicit column list.
+  Snowflake accepts the form without them, but the documented syntax requires
+  them and a package should not depend on undocumented tolerance.
 - Layout matches the shape the ecosystem has settled on: marts at the root of
   `models/`, with `staging/` and `intermediate/` beneath. Anything at the root
   is a model this package publishes.

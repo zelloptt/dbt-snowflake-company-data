@@ -75,16 +75,7 @@ select
     {% endif %}
 
     {% if domain_column %}
-    lower(
-        split_part(
-            regexp_replace(
-                regexp_replace(trim(cast({{ domain_column }} as {{ dbt.type_string() }})),
-                    '^[a-zA-Z][a-zA-Z0-9+.-]*://', ''),
-                '^www\\.', ''
-            ),
-            '/', 1
-        )
-    ) as match_input_domain
+    {{ snowflake_company_data.normalize_domain(domain_column) }} as match_input_domain
     {% else %}
     cast(null as {{ dbt.type_string() }}) as match_input_domain
     {% endif %}

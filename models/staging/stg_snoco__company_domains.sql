@@ -23,16 +23,7 @@ with source as (
 select
     company_id,
     domain_raw,
-    -- strip scheme, then any www. prefix, then anything from the first slash
-    lower(
-        split_part(
-            regexp_replace(
-                regexp_replace(trim(domain_raw), '^[a-zA-Z][a-zA-Z0-9+.-]*://', ''),
-                '^www\\.', ''
-            ),
-            '/', 1
-        )
-    ) as domain,
+    {{ snowflake_company_data.normalize_domain('domain_raw') }} as domain,
     observed_from_date
 
 from source

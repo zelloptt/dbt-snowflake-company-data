@@ -1,7 +1,7 @@
 # Snowflake Company Data dbt Package
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![dbt-core](https://img.shields.io/badge/dbt--core-%3E%3D1.10.0%20%3C3.0.0-orange.svg)](https://github.com/dbt-labs/dbt-core)
+[![dbt-core](https://img.shields.io/badge/dbt--core-%3E%3D1.10.8%20%3C3.0.0-orange.svg)](https://github.com/dbt-labs/dbt-core)
 [![Warehouse: Snowflake](https://img.shields.io/badge/warehouse-Snowflake-29B5E8.svg)](https://www.snowflake.com/)
 [![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-yellow.svg)](CHANGELOG.md)
 
@@ -35,7 +35,10 @@ This package absorbs that complexity once so you do not have to solve it in ever
 
 Nine staging models sit underneath, one per source object, renamed and typed and
 nothing else. Three public macros are usable on their own:
-`normalize_company_name`, `company_name_similarity`, and the blocking key.
+`normalize_company_name`, `normalize_domain` and `company_name_similarity`.
+(The blocking key is `_blocking_key`, which is private: the leading underscore
+means it is an implementation detail of the matching models and its signature
+may change in a patch release.)
 
 Row counts are from the free share as of 2026-08-08 and will drift.
 
@@ -110,7 +113,7 @@ Both layouts work and the package cannot tell them apart, which is the point:
 
 A replica is worth considering. The share exposes secure views whose
 `ROW_COUNT` and `BYTES` are `NULL`, so nothing downstream can reason about
-size, and no object in it carries a load timestamp of any kind. Cloning the ten
+size, and no object in it carries a load timestamp of any kind. Cloning the nine
 objects this package reads into your own schema costs little and gives you both
 back.
 

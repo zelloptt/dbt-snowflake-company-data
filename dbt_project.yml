@@ -2,11 +2,20 @@ name: 'snowflake_company_data'
 version: '0.1.0'
 config-version: 2
 
-# The <3.0.0 ceiling is deliberate. The dbt Fusion engine reports itself as
-# version 2.x, so a <2.0.0 ceiling costs the Fusion-compatible badge on the
+# The >=1.10.8 floor is not cosmetic and is not a guess. Generic tests in this
+# package nest their arguments under `arguments:`, which dbt only accepts once
+# the require_generic_test_arguments_property behaviour flag defaults true, and
+# that happened in 1.10.8. Measured, not read: dbt-core 1.10.7 fails to parse
+# this package with
+#   macro 'dbt_macro__test_relationships' takes no keyword argument 'arguments'
+# and 1.10.8 parses clean. The floor was >=1.10.0 until that was tested, which
+# claimed support for eight patch releases the package does not work on.
+#
+# The <3.0.0 ceiling is equally deliberate. The dbt Fusion engine reports itself
+# as version 2.x, so a <2.0.0 ceiling costs the Fusion-compatible badge on the
 # dbt Package Hub and makes Fusion warn (and eventually error) on install.
-# Do not narrow this without reading RELEASE.md first.
-require-dbt-version: [">=1.10.0", "<3.0.0"]
+# Do not narrow either bound without reading RELEASE.md first.
+require-dbt-version: [">=1.10.8", "<3.0.0"]
 
 model-paths: ["models"]
 macro-paths: ["macros"]
@@ -106,6 +115,15 @@ vars:
     # this are dropped rather than fanned out, and a warn-severity test reports
     # how many. See docs/DISCOVERY.md trap 1.
     snoco__max_identifier_array_size: 25
+
+    # The count of oversized LEI arrays we already know about, and how far it
+    # may move before the guard test speaks up. The test watches for DRIFT from
+    # this baseline rather than for the defect itself, because the defect is
+    # permanent, is the provider's, and warning about it on every build trains
+    # everyone to ignore the warning. Set the baseline to 0 to warn whenever any
+    # oversized array exists.
+    snoco__expected_oversized_lei_arrays: 230
+    snoco__oversized_lei_array_tolerance: 50
 
     # ------------------------------------------------------------------
     # Engine escape hatch

@@ -1,3 +1,16 @@
+> **HISTORICAL ARTIFACT. Do not follow this document.**
+>
+> This is the prompt that specified the package before it was built. The package
+> now exists and diverges from it in ways that were decided by measurement rather
+> than by plan: the layout is flat marts at the root of `models/` rather than
+> themed subdirectories, sources are addressed by relation vars rather than
+> identifier vars, the spine is 2.9M rows rather than the ~100K assumed here, and
+> the dbt floor is 1.10.8 rather than 1.10.0.
+>
+> Kept for provenance, because the reasoning behind several decisions only makes
+> sense against what was originally asked for. For what the package actually is,
+> read `README.md`, `DECISIONLOG.md` and `docs/DISCOVERY.md`.
+
 # Build Prompt: `dbt-snowflake-company-data`
 
 Run this from inside the empty (or `git init`'d) package repository. It assumes you have a Snowflake connection profile that can query the free public data share.
