@@ -23,26 +23,24 @@ Initial release. Not yet published to the dbt Package Hub.
 
 ## Under the Hood
 
-- Layout now matches the shape the ecosystem has settled on: marts at the root
-  of `models/`, with `staging/` and `intermediate/` beneath. Anything at the
-  root is a model this package publishes.
+- Layout matches the shape the ecosystem has settled on: marts at the root of
+  `models/`, with `staging/` and `intermediate/` beneath. Anything at the root
+  is a model this package publishes.
 - Each source object is addressable by a var (`snoco_company_index` and so on)
   defaulting to its `source()` call, so any single table can be repointed at a
   seed or another relation without touching package code. Lineage is unchanged.
-
-
-## Under the Hood
-
 - `require-dbt-version` set to `[">=1.10.0", "<3.0.0"]` for dbt Fusion compatibility.
 - Development files are excluded from the distribution archive via `.gitattributes`.
   A Package Hub install untars GitHub's source tarball for the tag straight into
   your `dbt_packages/`, and those tarballs honour `export-ignore`, so
-  `integration_tests/`, `.github/`, `docs/` and our contributor documentation no
-  longer land in your project. You receive 5 files instead of 32.
-- `README.md` now links to `DECISIONLOG.md` and `CONTRIBUTING.md` absolutely, so
+  `integration_tests/`, `.github/`, `docs/` and our contributor documentation
+  never land in your project. 36 files ship out of 55 tracked.
+- `README.md` links to `DECISIONLOG.md` and `CONTRIBUTING.md` absolutely, so
   those links resolve when the README is read from inside `dbt_packages/`.
 - Removed the empty scaffold directories and their `.gitkeep` files. dbt tolerates
   resource paths that are declared in `dbt_project.yml` but absent from disk.
+- Corrected the spine size in the README. It said "roughly 100,000 companies";
+  it is 2.9 million.
 
 <!--
 FORMAT NOTES (delete this block before the first published release)
