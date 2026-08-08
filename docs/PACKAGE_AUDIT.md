@@ -56,22 +56,30 @@ first release · **LOW** worth doing · **INFO** noted, no action proposed.
 
 Each was treated as unverified until executed.
 
-### 3.1 `require-dbt-version` parses, and the ceiling admits Fusion: **CONFIRMED**
+### 3.1 `require-dbt-version`: **CEILING CONFIRMED, FLOOR WAS WRONG**
 
-Boundary behaviour, via `dbt_common.semver.versions_compatible`:
+The original check ran `dbt_common.semver.versions_compatible` over the bound
+and confirmed 1.10.0 was admitted and 1.9.9 and 3.0.0 were not. That is a test
+of the range arithmetic, and it passed. It is not a test of whether the package
+works on the versions the range admits, and that distinction is the whole
+finding: **the package failed on every version from 1.10.0 to 1.10.7.**
 
-| dbt version | Admitted |
-|---|---|
-| 1.9.9 | no |
-| 1.10.0 | **yes** |
-| 2.0.0 | **yes** |
-| 2.9.9 | **yes** |
-| 3.0.0 | no |
+Re-tested by installing each engine and parsing the package as an installed
+dependency:
 
-Stronger than a parse check: dbt-fusion 2.0.0-preview.204 ran `dbt deps` and
-`dbt parse` to success on a consumer project with this package installed.
-The ceiling does not merely admit Fusion in theory; Fusion actually installs
-and parses the package.
+| dbt version | Range admits | Package actually parses |
+|---|---|---|
+| 1.10.7 | no, since the fix | **no**: `macro 'dbt_macro__test_relationships' takes no keyword argument 'arguments'` |
+| 1.10.8 | yes | **yes** |
+| 1.12.0 | yes | **yes** |
+| 2.0.0-preview.204 (Fusion) | yes | **yes**, `dbt deps` and `dbt parse` both succeed |
+
+Floor raised to `>=1.10.8`. A consumer on 1.10.7 now gets "This version of dbt
+is not supported with the 'snowflake_company_data' package" rather than a macro
+error naming dbt internals.
+
+The ceiling is confirmed as it always was: Fusion reports 2.x, installs, and
+parses the package.
 
 ### 3.2 `sfcd`-era naming is gone: **CONFIRMED**
 

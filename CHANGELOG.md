@@ -13,8 +13,8 @@ Initial release. Not yet published to the dbt Package Hub.
   every plausible company with its evidence; `snoco__company_match` picks one
   winner per input row. Deterministic domain matching and blocked fuzzy name
   matching, scored separately rather than blended.
-- **Macros**: `normalize_company_name` and `company_name_similarity`, usable on
-  their own.
+- **Macros**: `normalize_company_name`, `normalize_domain` and
+  `company_name_similarity`, usable on their own.
 - 64 tests, including guards for the three source defects that are silent
   otherwise: oversized identifier arrays, hierarchy recursion truncation, and
   un-normalised similarity scores.
@@ -56,7 +56,9 @@ Initial release. Not yet published to the dbt Package Hub.
 - Each source object is addressable by a var (`snoco_company_index` and so on)
   defaulting to its `source()` call, so any single table can be repointed at a
   seed or another relation without touching package code. Lineage is unchanged.
-- `require-dbt-version` set to `[">=1.10.0", "<3.0.0"]` for dbt Fusion compatibility.
+- `require-dbt-version` is `[">=1.10.8", "<3.0.0"]`. The ceiling admits dbt
+  Fusion, which reports itself as 2.x; the floor is the first release that
+  accepts this package's test syntax (see Bug Fixes).
 - Development files are excluded from the distribution archive via `.gitattributes`.
   A Package Hub install untars GitHub's source tarball for the tag straight into
   your `dbt_packages/`, and those tarballs honour `export-ignore`, so
