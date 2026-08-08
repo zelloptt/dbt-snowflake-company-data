@@ -5,6 +5,19 @@ Initial release. Not yet published to the dbt Package Hub.
 ## Features
 
 - Repository scaffold, package configuration, and contribution tooling.
+- **The models.** Nine staging models over the free share's company graph, three
+  intermediate models, and five marts: `snoco__companies` (2.9M rows, one per
+  company), `snoco__company_identifiers`, `snoco__company_domains`,
+  `snoco__company_securities`, and `snoco__company_hierarchy`.
+- **Matching layer**, off by default. `snoco__company_match_candidates` keeps
+  every plausible company with its evidence; `snoco__company_match` picks one
+  winner per input row. Deterministic domain matching and blocked fuzzy name
+  matching, scored separately rather than blended.
+- **Macros**: `normalize_company_name` and `company_name_similarity`, usable on
+  their own.
+- 64 tests, including guards for the three source defects that are silent
+  otherwise: oversized identifier arrays, hierarchy recursion truncation, and
+  un-normalised similarity scores.
 
 ## Under the Hood
 

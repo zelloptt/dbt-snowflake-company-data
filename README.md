@@ -23,14 +23,29 @@ This package absorbs that complexity once so you do not have to solve it in ever
 
 ## What It Does
 
-| Layer | What you get |
-|---|---|
-| **Staging** | One model per source table. Renamed, typed, documented. Nothing else. |
-| **Entities** | A one-row-per-company spine, a tidy identifier table, resolved characteristics, industry rollups, and securities. |
-| **Matching** | Deterministic identifier joins plus blocked fuzzy name matching, so you can attach your own CRM records to the public spine. |
-| **Macros** | Company name normalization, match scoring, and blocking, usable on their own. |
+| Model | Grain | Rows |
+|---|---|---|
+| `snoco__companies` | one row per company | 2,918,929 |
+| `snoco__company_identifiers` | company + identifier type + value | 3,913,860 |
+| `snoco__company_domains` | company + domain | 319,269 |
+| `snoco__company_securities` | company + security type + id | 985,971 |
+| `snoco__company_hierarchy` | one row per root-to-company path | 713 |
+| `snoco__company_match_candidates` | your record + company + method | opt-in |
+| `snoco__company_match` | one row per matched record of yours | opt-in |
 
-Full model list arrives with the first release. See [DECISIONLOG.md](https://github.com/zelloptt/dbt-snowflake-company-data/blob/main/DECISIONLOG.md) for the reasoning behind each modeling choice.
+Nine staging models sit underneath, one per source object, renamed and typed and
+nothing else. Three public macros are usable on their own:
+`normalize_company_name`, `company_name_similarity`, and the blocking key.
+
+Row counts are from the free share as of 2026-08-08 and will drift.
+
+Two things the table above will not tell you, so they are said here. The
+**hierarchy is nearly empty**: 424 edges against 2.9M companies, roughly 0.015%
+coverage. And there is **no employee count and no revenue** anywhere in the free
+share, so this is an enrichment and resolution layer, not a prospecting
+database.
+
+See [DECISIONLOG.md](https://github.com/zelloptt/dbt-snowflake-company-data/blob/main/DECISIONLOG.md) for the reasoning behind each modeling choice.
 
 ## Warehouse Support
 
@@ -70,13 +85,53 @@ While pre-1.0, pin to a minor range. Breaking changes ship as minor bumps until 
 
 ## Configure
 
-At minimum, point the package at your copy of the share:
+**You must set both location vars.** There is no default that works
+unconfigured, because the share's database name is chosen by whoever runs
+`CREATE DATABASE ... FROM LISTING` and is different in every account.
 
 ```yaml
 vars:
   snowflake_company_data:
-    snoco_database: MY_PUBLIC_DATA_DB    # defaults to SNOWFLAKE_PUBLIC_DATA_FREE
-    snoco_schema: PUBLIC_DATA_FREE       # provider-controlled, rarely changes
+    snoco_database: MY_PUBLIC_DATA_DB
+    snoco_schema: PUBLIC_DATA_FREE
+```
+
+The shipped defaults describe the maintainers' own deployment, which reads a
+daily replica of the share rather than the share itself. If you leave them
+alone you will get a "does not exist or not authorized" error naming a database
+you have never heard of. That is this setting being unset, not a bug.
+
+Both layouts work and the package cannot tell them apart, which is the point:
+
+| You read | `snoco_database` | `snoco_schema` |
+|---|---|---|
+| The Marketplace share directly | whatever you named it at `CREATE DATABASE` | `PUBLIC_DATA_FREE` |
+| Your own replica of it | your database | your schema |
+
+A replica is worth considering. The share exposes secure views whose
+`ROW_COUNT` and `BYTES` are `NULL`, so nothing downstream can reason about
+size, and no object in it carries a load timestamp of any kind. Cloning the ten
+objects this package reads into your own schema costs little and gives you both
+back.
+
+### Source freshness
+
+Not configured by this package, deliberately: nothing in the share carries a
+load timestamp, and `LAST_ALTERED` reflects DDL and background metadata
+operations rather than data loads, so any freshness shipped here would be a
+confident wrong answer.
+
+If you read a replica that has a real anchor, turn it on from your own
+`dbt_project.yml`:
+
+```yaml
+sources:
+  snowflake_company_data:
+    snoco:
+      +loaded_at_field: cloned_at
+      +freshness:
+        warn_after: {count: 36, period: hour}
+        error_after: {count: 72, period: hour}
 ```
 
 ### Output schemas
@@ -117,7 +172,7 @@ Disabled by default because it needs to know where your data lives. Point it at 
 vars:
   snowflake_company_data:
     snoco_matching_enabled: true
-    snoco__match_source: "ref('dim_accounts')"
+    snoco__match_source: dim_accounts      # a model name, resolved with ref()
     snoco__match_id_column: account_id
     snoco__match_name_column: account_name
     snoco__match_domain_column: website_domain
@@ -125,9 +180,37 @@ vars:
     snoco__match_max_candidates: 5
 ```
 
-Two models come out: `snoco__company_match_candidates` for review, and `snoco__company_match` with one deterministic best match per input row.
+`snoco__match_source` takes either a model name, resolved with `ref()`, or a
+fully qualified relation such as `analytics.crm.dim_accounts` if you would
+rather point at a raw table than wrap it in a model. Anything containing a dot
+is treated as the latter.
 
-Full variable reference lands with the first release.
+Two models come out. `snoco__company_match_candidates` keeps every plausible
+company with the evidence that produced it, for review.
+`snoco__company_match` picks one winner per input row.
+
+Matching runs two methods and keeps them separate rather than blending them
+into one number:
+
+- **domain** is deterministic and scored `1.0`. Your domain equals a domain the
+  share attributes to that company. `snoco__match_min_score` does not apply,
+  because a domain match is an identity assertion rather than a similarity.
+  Domains that resolve to several companies are still returned, flagged
+  `is_shared_domain`, so the ambiguity is visible instead of arbitrarily
+  resolved.
+- **name** is fuzzy and blocked. Only companies sharing a cheap blocking key
+  with your normalised name are scored at all, which is what makes the thing
+  finish against a 2.9M-row spine. The cost is recall: two names that differ in
+  their first four characters can never match, so `ibm` will not find
+  `international business machines`. Run domain matching alongside it.
+
+Rows where the runner-up scored within `snoco__match_ambiguity_margin` of the
+winner are flagged `is_ambiguous`. The winner is still a real answer, just not a
+confident one.
+
+Input rows with no candidate above the threshold are **absent** from
+`snoco__company_match` rather than present with a null `company_id`, so a left
+join from your own table gives you the unmatched set without a filter.
 
 ## Contributing
 
