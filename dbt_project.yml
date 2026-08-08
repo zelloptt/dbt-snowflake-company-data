@@ -26,14 +26,21 @@ vars:
     # a var as null in its own dbt_project.yml, var('snoco_database', default)
     # resolves to null rather than falling back, because the var IS defined.
     # Leaving it undeclared lets the var() default in the sources file work.
-    # The default is SNOWFLAKE_PUBLIC_DATA_FREE, not target.database, because
-    # the share is a separate database from the user's build database.
+    # It is never target.database: the data lives in a separate database from
+    # the user's build database, whether that is the Marketplace share itself
+    # or a local replica of it.
+    #
+    # Both defaults describe Zello's own deployment, which reads a daily
+    # replica rather than the share directly. EVERY OTHER CONSUMER MUST SET
+    # BOTH. There is no default that works unconfigured, because the share's
+    # database name is chosen at CREATE DATABASE ... FROM LISTING time and is
+    # different in every account. See README "Configure".
     # ------------------------------------------------------------------
-    snoco_schema: 'PUBLIC_DATA_FREE'
+    snoco_schema: 'SNOWFLAKE_COMPANY_DATA'
 
     # ------------------------------------------------------------------
     # Source table identifiers
-    # Generated from live introspection. See DISCOVERY.md.
+    # Generated from live introspection. See docs/DISCOVERY.md.
     # These exist so the integration test project can repoint every source
     # at a seed without touching package code.
     # ------------------------------------------------------------------
@@ -65,8 +72,21 @@ vars:
     snoco__match_ticker_column: null
     snoco__match_min_score: 0.90
     snoco__match_max_candidates: 5
+
+    # A winner whose runner-up scored within this margin is flagged
+    # is_ambiguous in snoco__company_match. It does not change which row wins,
+    # it marks the rows where the win was close enough to be worth checking.
+    snoco__match_ambiguity_margin: 0.02
     snoco__hierarchy_max_depth: 10
-    snoco__source_freshness_enabled: false
+
+    # Identifier arrays in COMPANY_INDEX are mostly single-valued, but a
+    # provider-side grouping bug gives 230 companies a shared LEI array, the
+    # largest holding 5,287 entries and carried verbatim by 47 different
+    # companies. Flattening those unguarded adds 270,001 rows that assert
+    # ownership of identifiers the company does not hold. Arrays longer than
+    # this are dropped rather than fanned out, and a warn-severity test reports
+    # how many. See docs/DISCOVERY.md trap 1.
+    snoco__max_identifier_array_size: 25
 
     # ------------------------------------------------------------------
     # Engine escape hatch
