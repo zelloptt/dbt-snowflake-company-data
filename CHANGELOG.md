@@ -20,6 +20,12 @@ Initial release. Not yet published to the dbt Package Hub.
   un-normalised similarity scores.
 - Doc blocks for the columns that repeat across models, so `company_id` and
   friends are described once.
+- **A runnable integration test suite.** `integration_tests/` seeds ten
+  synthetic fixtures, builds the package against them and runs 67 tests, with
+  no Marketplace listing required. The fixtures are adversarial by design: an
+  over-guard LEI array, a company with two parents, an uppercase domain, a name
+  that is only a legal form, SEC filers with no company. CI runs it on dbt
+  1.10.8 and 1.12.0 plus a Fusion parse lane.
 
 ## Bug Fixes
 

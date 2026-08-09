@@ -1,0 +1,41 @@
+# Job name must stay `fusion`; branch protection requires this exact context.
+#
+# The dbt Package Hub shows a Fusion-compatible badge and computes it by parsing
+# the package with Fusion. This lane is how we find out before the hub does.
+name: fusion
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: fusion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fusion:
+    name: fusion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dbt Fusion
+        run: |
+          curl -fsSL https://public.cdn.getdbt.com/fs/install/install.sh \
+            | sh -s -- --update
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Fusion version
+        run: dbt --version
+      - name: dbt deps
+        working-directory: integration_tests
+        run: dbt deps --profiles-dir ./ci
+      - name: dbt parse
+        working-directory: integration_tests
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          DBT_ENV_SECRET_SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+        run: dbt parse --profiles-dir ./ci

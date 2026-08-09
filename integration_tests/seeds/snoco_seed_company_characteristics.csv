@@ -1,0 +1,21 @@
+company_id,relationship_type,value,relationship_start_date
+C1,company_name,Aurora Robotics Inc.,2024-01-01
+C2,company_name,Borealis Freight Group Ltd,2024-01-01
+C3,company_name,Cinder & Vale Holdings LLC,2024-01-01
+C4,company_name,Aurora Robotics de Mexico S.A.,2024-01-01
+C5,company_name,Dunmore Analytics Corporation,2024-01-01
+C6,company_name,Inc.,2024-01-01
+C7,company_name,M/S Ledger Partners L.P.,2024-01-01
+C8,company_name,Everest Provisioning Co,2024-01-01
+C1,business_address_city,Austin,2024-01-01
+C1,business_address_state,TX,2024-01-01
+C1,business_address_country,United States,2024-01-01
+C1,sic_code,3559,2024-01-01
+C1,sic_description,Special Industry Machinery,2024-01-01
+C1,company_legal_structure,Corporation,2024-01-01
+C2,business_address_city,Manchester,2024-01-01
+C2,business_address_country,United Kingdom,2024-01-01
+C5,lei,LEIDUNMORE000000000001,2023-01-01
+C5,lei,LEIDUNMORE000000000002,2024-06-01
+C5,sec_industry_group,Software & Services,2024-01-01
+C8,business_address_country,United States,2024-01-01

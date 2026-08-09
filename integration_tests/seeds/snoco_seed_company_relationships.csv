@@ -1,0 +1,7 @@
+company_id,company_name,related_company_id,related_company_name,relationship_type,relationship_start_date
+C1,Aurora Robotics Inc.,C4,Aurora Robotics de Mexico S.A.,Parent,2024-01-01
+C4,Aurora Robotics de Mexico S.A.,C1,Aurora Robotics Inc.,Subsidiary,2024-01-01
+C2,Borealis Freight Group Ltd,C4,Aurora Robotics de Mexico S.A.,Parent,2024-01-01
+C4,Aurora Robotics de Mexico S.A.,C2,Borealis Freight Group Ltd,Subsidiary,2024-01-01
+C1,Aurora Robotics Inc.,C8,Everest Provisioning Co,Parent,2024-01-01
+C8,Everest Provisioning Co,C1,Aurora Robotics Inc.,Subsidiary,2024-01-01
