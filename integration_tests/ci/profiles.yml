@@ -1,17 +1,28 @@
 # Profile used by CI only. Every value comes from a repository secret; nothing
 # here is a credential. Contributors running locally copy
 # ../profiles.yml.example instead.
+#
+# Each env_var carries a placeholder default so that `dbt parse` works with no
+# secrets at all. That is not a convenience: parse does not open a connection,
+# so the whole parse-level lane can run on pull requests from forks, which
+# GitHub never gives secrets to. Without the defaults, dbt refuses to load the
+# profile ("field `database` is required") and every fork PR fails on
+# configuration rather than on anything the contributor wrote.
+#
+# The placeholders are deliberately not plausible. Anything that actually opens
+# a connection must be gated on secrets being present; if a job ever reaches
+# Snowflake with these values it will fail loudly, which is the intent.
 snoco_integration_tests:
   target: snowflake
   outputs:
     snowflake:
       type: snowflake
-      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
-      user: "{{ env_var('SNOWFLAKE_USER') }}"
-      password: "{{ env_var('DBT_ENV_SECRET_SNOWFLAKE_PASSWORD') }}"
-      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
-      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
-      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', 'PARSE_ONLY_NO_SECRETS') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'PARSE_ONLY_NO_SECRETS') }}"
+      password: "{{ env_var('DBT_ENV_SECRET_SNOWFLAKE_PASSWORD', 'PARSE_ONLY_NO_SECRETS') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'PARSE_ONLY_NO_SECRETS') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'PARSE_ONLY_NO_SECRETS') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'PARSE_ONLY_NO_SECRETS') }}"
       schema: "snoco_ci_{{ env_var('GITHUB_RUN_ID', 'local') }}"
       threads: 8
       client_session_keep_alive: false

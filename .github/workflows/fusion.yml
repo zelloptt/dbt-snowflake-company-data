@@ -2,6 +2,12 @@
 #
 # The dbt Package Hub shows a Fusion-compatible badge and computes it by parsing
 # the package with Fusion. This lane is how we find out before the hub does.
+#
+# Parse only, and therefore no secrets. That is what lets it be a required check
+# without locking out contributors working from a fork, which GitHub never gives
+# secrets to. The CI profile supplies placeholder defaults so the profile loads;
+# Fusion refuses to parse at all without a `database` field, which is what made
+# this lane fail before the defaults existed.
 name: fusion
 
 on:
@@ -21,8 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dbt Fusion
         run: |
-          curl -fsSL https://public.cdn.getdbt.com/fs/install/install.sh \
-            | sh -s -- --update
+          curl -fsSL https://public.cdn.getdbt.com/fs/install/install.sh | sh -s -- --update
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Fusion version
         run: dbt --version
@@ -31,11 +36,4 @@ jobs:
         run: dbt deps --profiles-dir ./ci
       - name: dbt parse
         working-directory: integration_tests
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          DBT_ENV_SECRET_SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
         run: dbt parse --profiles-dir ./ci

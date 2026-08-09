@@ -102,11 +102,33 @@ they shipped broken once.
 
 ### A note on CI
 
-`main` requires the `integration-tests` and `fusion` status checks. Both
-workflows live in `.github/workflows/` and need six repository secrets:
-`SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_ROLE`,
-`SNOWFLAKE_DATABASE`, `SNOWFLAKE_WAREHOUSE`. Each run builds into
-`snoco_ci_<run_id>` and drops it afterwards.
+Two lanes, and the split matters if you are contributing from a fork.
+
+**The required checks need no credentials.** `integration-tests` installs dbt at
+both ends of the supported range (1.10.8 and 1.12.0), runs `dbt deps` and
+`dbt parse`, and asserts the package is fully wired: model, test and macro
+counts above their floors, and no package model reading a `source()` instead of
+a fixture. `fusion` does the same under the dbt Fusion engine. Both pass on a
+fork PR, because GitHub does not give secrets to those and a required check that
+needs them would lock every outside contributor out permanently.
+
+This lane catches most of what actually breaks: Jinja and YAML errors, macro
+signature validation, ref and source resolution, and version incompatibilities.
+It is the lane that would have caught the `require-dbt-version` floor being
+wrong.
+
+**The warehouse lane executes SQL and is not required.** `warehouse build` runs
+`dbt build` for real against Snowflake, so it only runs on pushes to `main` and
+on PRs raised from a branch in this repository. It needs six repository secrets
+(`SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_ROLE`,
+`SNOWFLAKE_DATABASE`, `SNOWFLAKE_WAREHOUSE`), builds into `snoco_ci_<run_id>`
+and drops it afterwards. Without those secrets it skips with a loud warning
+rather than failing, and the job summary says so, because a silent skip would
+read as "the tests passed".
+
+So: a green PR means the package parses everywhere it claims to. It does not by
+itself mean the SQL ran. Run `dbt build` locally, which is the point of the
+fixtures needing no Marketplace listing.
 
 ## Reporting bugs
 

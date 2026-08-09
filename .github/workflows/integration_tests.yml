@@ -1,5 +1,23 @@
-# The job name must stay `integration-tests`: branch protection on main requires
-# a status check by exactly that name, and renaming it silently blocks every PR.
+# Branch protection on main requires a status check named exactly
+# `integration-tests`. That name is load-bearing: rename the aggregate job below
+# and every pull request becomes permanently unmergeable, with no error message
+# saying why.
+#
+# The split between the two lanes is deliberate and is not about cost.
+#
+# GitHub does not pass repository secrets to workflows triggered by pull
+# requests from forks. So any REQUIRED check that needs Snowflake can never pass
+# for an outside contributor, which for an open-source package means nobody
+# outside the org can ever have a green PR. The required lane therefore has to
+# run without credentials.
+#
+# What that lane can still catch is most of what actually breaks: Jinja errors,
+# YAML errors, macro signature validation, ref and source resolution, and
+# version incompatibilities. `dbt parse` does not open a connection. The bug
+# that shipped a broken `require-dbt-version` floor would have been caught here.
+#
+# What it cannot catch is anything that requires executing SQL. That is the
+# warehouse lane, which runs wherever secrets are available and is not required.
 name: integration-tests
 
 on:
@@ -12,6 +30,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ---------------------------------------------------------------- no secrets
   build:
     name: dbt ${{ matrix.dbt-version }} / adapter ${{ matrix.adapter-version }}
     runs-on: ubuntu-latest
@@ -26,8 +45,7 @@ jobs:
         # `dbt-snowflake~=1.10` against `dbt-core==1.10.8` resolves a
         # dbt-adapters newer than that core, and the run dies on
         # `cannot import name 'InvalidCatalogIntegrationConfigError'`, which
-        # reads like a package bug and is not one. These pairs are the ones
-        # verified to work.
+        # reads like a package bug and is not one.
         include:
           - dbt-version: "1.10.8"
             adapter-version: "1.10.0"
@@ -47,33 +65,56 @@ jobs:
       - name: dbt deps
         working-directory: integration_tests
         run: dbt deps --profiles-dir ./ci
-      - name: dbt build
+      - name: dbt parse
         working-directory: integration_tests
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          DBT_ENV_SECRET_SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-        run: dbt build --profiles-dir ./ci --full-refresh
-      - name: Drop the run's schema
-        if: always()
+        run: dbt parse --profiles-dir ./ci
+      - name: Assert the package is fully wired
         working-directory: integration_tests
-        env:
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          DBT_ENV_SECRET_SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-        run: dbt run-operation drop_ci_schema --profiles-dir ./ci || true
+        run: |
+          python - <<'PY'
+          import json, sys
+          m = json.load(open("target/manifest.json"))
+          pkg = "snowflake_company_data"
+          counts = {
+              "package models": len([k for k in m["nodes"] if k.startswith(f"model.{pkg}")]),
+              "package tests":  len([k for k in m["nodes"] if k.startswith(f"test.{pkg}")]),
+              "package macros": len([k for k in m["macros"] if k.startswith(f"macro.{pkg}")]),
+              "fixtures":       len([k for k in m["nodes"] if k.startswith("seed.")]),
+          }
+          # Floors, not equalities: adding a model should not fail CI, but a
+          # model or test silently disabling itself should.
+          floors = {"package models": 20, "package tests": 60,
+                    "package macros": 5, "fixtures": 10}
+          bad = False
+          for k, want in floors.items():
+              got = counts[k]
+              print(f"{k:<16} {got:>3}  (min {want})")
+              if got < want:
+                  print(f"  ERROR: {k} dropped below {want}")
+                  bad = True
+          # No package model may depend on a source node. The source is still
+          # DECLARED at its real location, so checking the source's database
+          # here would always "fail" and prove nothing; what matters is that
+          # every staging model was redirected to a fixture by the relation
+          # vars. This catches a new model that calls source() directly, which
+          # would quietly reach the live share from CI.
+          leaked = [
+              (k.split(".")[-1], d)
+              for k, n in m["nodes"].items() if k.startswith(f"model.{pkg}")
+              for d in n["depends_on"]["nodes"] if d.startswith("source.")
+          ]
+          for model, dep in leaked:
+              print(f"  ERROR: {model} reads {dep} instead of a fixture")
+              bad = True
+          if not leaked:
+              print("sources          all overridden by fixtures")
+          sys.exit(1 if bad else 0)
+          PY
 
-  # Branch protection requires a context named exactly `integration-tests`. A
-  # matrix job cannot provide one: GitHub appends the matrix value, so the job
-  # above reports as `integration-tests (1.10.8)` and the requirement is never
-  # satisfied no matter how green it is. This aggregates the matrix into a
-  # single correctly-named check.
+  # ------------------------------------------------------- the required check
+  # A matrix job cannot provide a context named `integration-tests`: GitHub
+  # appends the matrix value, so it reports as `integration-tests (1.10.8)` and
+  # the requirement is never satisfied however green it is.
   integration-tests:
     name: integration-tests
     needs: build
@@ -84,3 +125,60 @@ jobs:
         run: |
           echo "matrix result: ${{ needs.build.result }}"
           [ "${{ needs.build.result }}" = "success" ] || exit 1
+
+  # ------------------------------------------------- secrets, not required
+  # Executes SQL, so it only runs where secrets exist: pushes to main and pull
+  # requests raised from a branch in this repository. Fork PRs skip it, and that
+  # is the whole reason it is not the required check.
+  warehouse-build:
+    name: warehouse build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      DBT_ENV_SECRET_SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Are the secrets configured?
+        id: secrets
+        run: |
+          if [ -z "$SNOWFLAKE_ACCOUNT" ] || [ -z "$SNOWFLAKE_DATABASE" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Warehouse build skipped"
+              echo
+              echo "Snowflake secrets are not set on this repository, so the"
+              echo "seeds, models and 67 tests did not run. The parse-level"
+              echo "lane still ran and is the required check."
+              echo
+              echo "To enable: add \`SNOWFLAKE_ACCOUNT\`, \`SNOWFLAKE_USER\`,"
+              echo "\`SNOWFLAKE_PASSWORD\`, \`SNOWFLAKE_ROLE\`,"
+              echo "\`SNOWFLAKE_DATABASE\` and \`SNOWFLAKE_WAREHOUSE\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Warehouse build skipped::Snowflake secrets are not configured; SQL was never executed."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.secrets.outputs.configured == 'true'
+        with:
+          python-version: "3.11"
+      - name: Install dbt
+        if: steps.secrets.outputs.configured == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install "dbt-core==1.12.0" "dbt-snowflake==1.10.8"
+      - name: dbt build
+        if: steps.secrets.outputs.configured == 'true'
+        working-directory: integration_tests
+        run: |
+          dbt deps --profiles-dir ./ci
+          dbt build --profiles-dir ./ci --full-refresh
+      - name: Drop the run's schema
+        if: always() && steps.secrets.outputs.configured == 'true'
+        working-directory: integration_tests
+        run: dbt run-operation drop_ci_schema --profiles-dir ./ci || true
