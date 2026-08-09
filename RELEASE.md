@@ -16,13 +16,38 @@ At 1.0.0 this switches to conventional semver: breaking changes become major bum
 
 ## Cutting a release
 
+**The tag is the release.** dbt resolves package versions from git tags, so a
+version that exists in `CHANGELOG.md` and `dbt_project.yml` but carries no tag
+does not exist to a consumer. `dbt deps` against the pin in the README fails
+with no matching version. Nothing else in this runbook matters if the tag is
+missing.
+
+There is **no release automation yet**. Every step below is manual and deliberate;
+`.github/workflows/` carries the integration test and Fusion lanes and nothing
+else. The changelog format rules exist so that automation can be added without
+rewriting history, not because something is reading the file today.
+
 1. Confirm CI is green on `main`, including the Fusion lane.
-2. Confirm the top of `CHANGELOG.md` carries the new version as an H1 and the notes are complete. **This is the source of truth for the release**; automation reads the version from here, not from `dbt_project.yml`.
-3. Bump `version:` in `dbt_project.yml` and `integration_tests/dbt_project.yml` to match.
-4. Merge to `main`. The auto-release workflow creates a **draft** GitHub release with notes sliced out of the changelog.
-5. Review the draft, then publish it.
-6. Tag format is bare semver with no `v` prefix (`0.2.0`, not `v0.2.0`). hubcap accepts both but its internal representation is inconsistent, so bare is safer.
-7. hubcap indexes hourly and opens a PR against `hub.getdbt.com`. Expect the new version to appear within a business day.
+2. Confirm the top of `CHANGELOG.md` carries the new version as an H1 and the notes are complete. **This is the source of truth for the release.** Take the version from here, not from `dbt_project.yml`.
+3. Bump `version:` in `dbt_project.yml` and `integration_tests/dbt_project.yml` to match. All three must agree before the tag is cut.
+4. Merge to `main`, then tag the merge commit and push the tag:
+
+   ```bash
+   git checkout main && git pull
+   git tag -a 0.1.0 -m "snowflake_company_data 0.1.0"
+   git push origin 0.1.0
+   ```
+
+   Tag format is bare semver with no `v` prefix (`0.2.0`, not `v0.2.0`). hubcap accepts both but its internal representation is inconsistent, so bare is safer. Annotated rather than lightweight, so the tag carries an author and a date.
+5. Create the GitHub release at that tag with the changelog section as the body:
+
+   ```bash
+   gh release create 0.1.0 --title "0.1.0" --notes-file <(sed -n '/^# snowflake_company_data v0.1.0$/,/^# snowflake_company_data v0.0.9$/p' CHANGELOG.md)
+   ```
+
+   For the first release there is no next H1 to stop at, so paste the notes by hand or slice to the format-notes comment block.
+6. A GitHub release is not required for `dbt deps` to resolve the version, only the tag is. It is required for the Package Hub listing and it is what a human reads, so do it anyway.
+7. hubcap indexes hourly and opens a PR against `hub.getdbt.com`. Expect the new version to appear within a business day. Until the package is listed (see below), the tag is still what makes a `git:`-style install work.
 
 ## Before the first public release
 

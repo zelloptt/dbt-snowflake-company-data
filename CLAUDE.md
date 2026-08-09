@@ -46,6 +46,7 @@ The `snoco` infix is not optional. hubcap's package best practices require disam
 - **`LAST_ALTERED` is not a freshness signal.** Snowflake documents it as reflecting DDL and background metadata operations. Source freshness ships off by default.
 - **Do not `USE SCHEMA INFORMATION_SCHEMA` on a share-derived database.** Snowflake documents that it can fail. Fully qualified references work fine.
 - **`ROW_COUNT` and `BYTES` are often null for share-derived objects**, since Marketplace listings commonly expose secure views. Use real `count(*)`.
+- **Never remove a `+schema` key from `dbt_project.yml`.** Every resource this package publishes must resolve to a non-null custom schema name. Many consumer projects override `generate_schema_name` and branch on `custom_schema_name is none`, falling back to deriving a schema from the node's path or file name, which turns `stg_snoco__company_index.sql` into a schema name. Setting `+schema` means that branch is never reached. The root key covers everything under `models:` by inheritance; a new resource type declared outside it needs its own. Change values freely, delete nothing.
 
 ## Working style
 

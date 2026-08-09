@@ -418,3 +418,75 @@ Fivetran's staging pattern emits `cast(null as <type>) as <column>` when an expe
 It does not make sense here. Every consumer of this package reads the *same* share, so a provider schema change breaks everyone identically and simultaneously. We want to find out on the next run, not discover it months later as an all-null column that quietly corrupted a mart.
 
 **Revisit if:** the package ever reads a source with genuine per-consumer schema variance.
+
+---
+
+## Every resource carries a `+schema`, and that is load-bearing
+
+`dbt_project.yml` sets `+schema` at the package root and again on `staging/`.
+The root key looks redundant, because `<target_schema>_snowflake_company_data`
+is close to what a consumer would get anyway. It is not redundant, and the
+reason is invisible from inside this repo.
+
+dbt passes the configured schema to `generate_schema_name` as
+`custom_schema_name`. Plenty of real projects override that macro, and a common
+override shape branches on `custom_schema_name is none` and falls back to
+deriving a schema from the node's path or file name. That is correct for the
+project's own models and nonsense for a package's: the node is
+`models/staging/stg_snoco__company_index.sql`, so the fallback returns the
+staging model's own file name as a schema name.
+
+Observed, not theorised. An install into a project whose `generate_schema_name`
+infers schemas from folder structure would have produced a schema derived from
+`stg_snoco__company_index.sql`. It did not, because `+schema` was set and the
+override took its normal branch.
+
+So the invariant is: **every resource this package publishes must resolve to a
+non-null custom schema name.** The root key satisfies it for everything today,
+since configs inherit down the path. A new subdirectory is fine. A new resource
+type declared outside `models:`, seeds most likely, is not, and would need its
+own key.
+
+The staging `+schema` is a different thing and is only a preference: it keeps
+nine views out of the mart schema.
+
+Documented in three places on purpose, because the failure mode is silent and
+appears only in someone else's project: a comment at the config block where
+someone would delete it, a note in the README for the consumer who overrides the
+macro, and a trap entry in CLAUDE.md for whoever edits this next.
+
+**Revisit if:** never, really. The cost is two lines and the failure it prevents
+is one nobody would debug quickly.
+
+---
+
+## The replica install is documented as a first-class shape
+
+The README used to mention reading a replica in a four-line aside under a
+configuration table. It is now a section with the rationale, the SQL, and the
+guard advice.
+
+Reading the share directly is the shape that gets someone started. Reading a
+copy is the shape they end up at, and it is the only reason `snoco_schema` is a
+variable rather than a constant, so burying it undersold both the option and the
+configuration surface built for it.
+
+Three concrete things the share cannot give: `ROW_COUNT` and `BYTES` are `NULL`
+on every secure view, so no size signal; no object carries a load timestamp, so
+no freshness anchor; and the provider republishes on their own schedule, so a
+long build can read two versions of the spine.
+
+The section says `CREATE TABLE ... AS SELECT` rather than `CLONE`, because
+Snowflake does not support cloning out of a listing-derived database and these
+are views regardless. It says to add `cloned_at` in the copy, which is what makes
+the source freshness block in the next section usable rather than hypothetical.
+It says to guard the copy on a row count, because `CREATE OR REPLACE` on a
+truncated pull silently replaces good data. And it says to keep the replica in
+one schema, preserving the two-var isomorphism with the share, while noting the
+per-object relation vars for anyone who cannot.
+
+No replication script ships. It would be one warehouse's opinion about
+scheduling, roles and guard thresholds, and every consumer's answer differs.
+
+**Revisit if:** enough people build the same replication procedure that shipping
+a macro to generate it beats describing it.

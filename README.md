@@ -113,11 +113,92 @@ statement lets you do, set `snoco_database` to match.
 | The share, your own name | whatever you named it | `PUBLIC_DATA_FREE` |
 | Your own replica of it | your database | your schema |
 
-A replica is worth considering. The share exposes secure views whose
-`ROW_COUNT` and `BYTES` are `NULL`, so nothing downstream can reason about
-size, and no object in it carries a load timestamp of any kind. Cloning the nine
-objects this package reads into your own schema costs little and gives you both
-back.
+That third row is the one most projects end up on. See
+[Reading a replica instead of the share](#reading-a-replica-instead-of-the-share).
+
+### Reading a replica instead of the share
+
+Pointing the package at the share works and is the fastest way to get started.
+Pointing it at your own copy is where most projects end up, and it is the reason
+`snoco_schema` is a variable rather than a constant.
+
+**What the share costs you.** All nine objects are secure views, and that takes
+three things away:
+
+- **No size signal.** `INFORMATION_SCHEMA.TABLES.ROW_COUNT` and `BYTES` are
+  `NULL` for every object in the share, so nothing downstream, including your
+  own cost and observability tooling, can reason about how big any of this is.
+- **No freshness anchor.** No object carries a load timestamp of any kind, and
+  `LAST_ALTERED` reflects DDL and background metadata operations rather than
+  data loads. There is nothing honest to point `loaded_at_field` at.
+- **No control over when the data moves.** The provider republishes on their
+  schedule. A build that starts before a republish and ends after it has read
+  two different versions of the spine.
+
+A copy on your own schedule gives all three back.
+
+**Making the copy.** Copy the nine objects this package reads into one schema you
+own, adding your own timestamp on the way through:
+
+```sql
+CREATE SCHEMA IF NOT EXISTS <your_db>.<your_schema>;
+
+CREATE OR REPLACE TABLE <your_db>.<your_schema>.COMPANY_INDEX AS
+SELECT *, CURRENT_TIMESTAMP() AS cloned_at
+FROM MARKETPLACE_CYBERSYN.PUBLIC_DATA_FREE.COMPANY_INDEX;
+
+-- and the same for the other eight:
+--   COMPANY_CHARACTERISTICS
+--   COMPANY_DOMAIN_RELATIONSHIPS
+--   COMPANY_RELATIONSHIPS
+--   COMPANY_SECURITY_RELATIONSHIPS
+--   SEC_CIK_INDEX
+--   OPENFIGI_SECURITY_INDEX
+--   PERMID_SECURITY_INDEX
+--   GEOGRAPHY_INDEX
+```
+
+`CREATE TABLE ... CLONE` is not the mechanism. Snowflake does not support
+cloning out of a database created from a listing, and these are views rather
+than tables in any case, so it is `CREATE TABLE ... AS SELECT`.
+
+The extra `cloned_at` column is safe. Staging models select named columns, so a
+column the package does not know about is ignored rather than a schema conflict.
+
+If you run the copy on a schedule, guard it on a row count before you replace
+anything. `CREATE OR REPLACE` on a degenerate pull swaps a good table for an
+empty one and nothing downstream will tell you. Per-object counts as of the last
+measurement are in each table's description in
+`models/staging/_snoco__sources.yml`, which ships with the package; a floor
+around 85% of the last known good count catches a truncated pull without firing
+on ordinary drift.
+
+**Pointing the package at it:**
+
+```yaml
+vars:
+  snowflake_company_data:
+    snoco_database: <your_db>
+    snoco_schema: <your_schema>
+```
+
+**Keep the replica in one schema.** The share puts everything in one
+(`PUBLIC_DATA_FREE`) and the package addresses all nine objects with exactly
+those two vars, so a single-schema replica keeps switching between the share and
+your copy a two-line change. If you genuinely cannot, each object also has its
+own relation var and can be repointed on its own:
+
+```yaml
+vars:
+  snowflake_company_data:
+    snoco_sec_cik_index: "{{ source('my_other_source', 'sec_cik_index') }}"
+```
+
+Those vars take any relation: a `source()` call, a `ref()`, or a bare fully
+qualified name. A `source()` or `ref()` still registers in the DAG, because the
+expression is rendered in the consuming model's context rather than the
+package's. A bare name is not a node and so has no lineage, which is the
+trade-off for pointing at something dbt does not manage.
 
 ### Source freshness
 
@@ -126,8 +207,9 @@ load timestamp, and `LAST_ALTERED` reflects DDL and background metadata
 operations rather than data loads, so any freshness shipped here would be a
 confident wrong answer.
 
-If you read a replica that has a real anchor, turn it on from your own
-`dbt_project.yml`:
+A replica has a real anchor. Turn it on from your own `dbt_project.yml`, which
+is also the only place you can, since dbt parses schema YAML before it renders
+Jinja and a package var therefore cannot reach a `freshness` block:
 
 ```yaml
 sources:
@@ -155,6 +237,23 @@ models:
     staging:
       +schema: my_staging_schema_name
 ```
+
+> **If your project overrides `generate_schema_name`, read this.** Every model in
+> this package resolves to a non-null custom schema name, because
+> `dbt_project.yml` sets `+schema` at the package root and again on `staging/`.
+> That is deliberate and it is load-bearing rather than cosmetic.
+>
+> A common override shape branches on `custom_schema_name is none` and falls back
+> to deriving a schema from the node's path or file name. That is correct for
+> models in your own project and nonsense for models in someone else's package:
+> the staging model's own file name comes back as the schema name. Because this
+> package always supplies a custom schema name, your override takes its normal
+> branch and the fallback is never reached.
+>
+> So: override the value, do not remove the key. A config block that sets
+> `+materialized` on the package without also setting `+schema` is fine, since
+> the package's own `+schema` still applies, but anything that nulls it out is
+> not.
 
 ### Enable and disable
 
