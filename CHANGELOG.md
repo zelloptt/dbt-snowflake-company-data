@@ -98,6 +98,13 @@ Initial release. Not yet published to the dbt Package Hub.
 
 ## Documentation
 
+- **Install instructions now use the git form.** The README pinned
+  `zelloptt/snowflake_company_data` with a version range, which is Package Hub
+  syntax and resolves against `hub.getdbt.com`. The package is not listed there
+  yet, so the snippet failed on the listing rather than on the version and no
+  git tag repairs it. The README leads with a `git:` + `revision:` install,
+  keeps the hub block as the form to switch to once listed, and is explicit that
+  a clone ignores `export-ignore` and therefore delivers more than the package.
 - `RELEASE.md` described an auto-release workflow that does not exist. The
   release process is manual, and the runbook now says so and gives the actual
   tag and `gh release` commands. It also leads with the point the first build
