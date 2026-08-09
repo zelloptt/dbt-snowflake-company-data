@@ -6,6 +6,11 @@
 # =============================================================================
 profiles.yml
 !**/profiles.yml.example
+# The CI profile is every-value-from-a-secret and contains no credential. It has
+# to be named profiles.yml for dbt to find it via --profiles-dir, so it needs an
+# explicit exception or the rule above silently drops it and CI fails with
+# "Path './ci' does not exist".
+!integration_tests/ci/profiles.yml
 .env
 *.env
 !*.env.example

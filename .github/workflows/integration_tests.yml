@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  integration-tests:
-    name: integration-tests
+  build:
+    name: dbt ${{ matrix.dbt-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -55,3 +55,19 @@ jobs:
           SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
         run: dbt run-operation drop_ci_schema --profiles-dir ./ci || true
+
+  # Branch protection requires a context named exactly `integration-tests`. A
+  # matrix job cannot provide one: GitHub appends the matrix value, so the job
+  # above reports as `integration-tests (1.10.8)` and the requirement is never
+  # satisfied no matter how green it is. This aggregates the matrix into a
+  # single correctly-named check.
+  integration-tests:
+    name: integration-tests
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every dbt version to have passed
+        run: |
+          echo "matrix result: ${{ needs.build.result }}"
+          [ "${{ needs.build.result }}" = "success" ] || exit 1

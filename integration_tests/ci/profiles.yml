@@ -1,0 +1,17 @@
+# Profile used by CI only. Every value comes from a repository secret; nothing
+# here is a credential. Contributors running locally copy
+# ../profiles.yml.example instead.
+snoco_integration_tests:
+  target: snowflake
+  outputs:
+    snowflake:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('DBT_ENV_SECRET_SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      schema: "snoco_ci_{{ env_var('GITHUB_RUN_ID', 'local') }}"
+      threads: 8
+      client_session_keep_alive: false
