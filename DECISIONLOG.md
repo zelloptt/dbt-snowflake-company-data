@@ -447,6 +447,22 @@ since configs inherit down the path. A new subdirectory is fine. A new resource
 type declared outside `models:`, seeds most likely, is not, and would need its
 own key.
 
+Measured rather than asserted. Parsing `integration_tests/` on dbt-core 1.12.0
+and reading `config.schema` off every node in the manifest whose `package_name`
+is `snowflake_company_data`:
+
+```
+package nodes: 85
+  resource_type=model  custom_schema_name='snowflake_company_data'
+  resource_type=model  custom_schema_name='stg_snowflake_company_data'
+  resource_type=test   custom_schema_name='dbt_test__audit'
+nodes with NULL custom schema name: 0
+```
+
+Note the tests are covered by dbt-core's own default rather than by anything
+here, so the two model values are the ones this repo is responsible for. Re-run
+that check after adding a resource type.
+
 The staging `+schema` is a different thing and is only a preference: it keeps
 nine views out of the mart schema.
 
