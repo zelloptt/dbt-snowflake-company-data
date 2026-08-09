@@ -490,3 +490,30 @@ scheduling, roles and guard thresholds, and every consumer's answer differs.
 
 **Revisit if:** enough people build the same replication procedure that shipping
 a macro to generate it beats describing it.
+
+---
+
+## The README documents the git install, not the hub install, until listed
+
+The README told consumers to pin `zelloptt/snowflake_company_data` with a
+version range. That is dbt Package Hub syntax, and it resolves against
+`hub.getdbt.com`. Checked, both ends: `hub.getdbt.com/api/v1/zelloptt/
+snowflake_company_data.json` returns 404, and `zelloptt` does not appear in
+hubcap's `hub.json`. The snippet fails for everyone who copies it, with a
+package-not-found error rather than a version error.
+
+Worth being precise about, because the obvious diagnosis is wrong. The missing
+release tag is a real defect and is fixed separately, but a tag does not repair
+this snippet. Hub resolution needs a hub listing. The tag repairs a *git*
+install, which is a different block of YAML.
+
+So the README now leads with the git install and keeps the hub block as the
+form to switch to once listed. The git install is honestly worse: a clone
+ignores `export-ignore`, so the consumer receives `integration_tests/`,
+`.github/` and our contributor docs along with the 38 files that are the
+package. Nothing is parsed, since dbt reads only the declared paths, so it is
+disk rather than behaviour. Said plainly in the README instead of hidden,
+because the alternative right now is an install that does not work at all.
+
+**Revisit when:** the hubcap PR lands and the listing exists. At that point the
+two blocks swap places and the git install becomes the footnote.

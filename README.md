@@ -74,15 +74,34 @@ GRANT IMPORTED PRIVILEGES ON DATABASE <your_database> TO ROLE <your_dbt_role>;
 
 ## Install
 
-Add to `packages.yml` in your dbt project:
+**Install from git.** The package is not yet listed on the dbt Package Hub, so
+hub syntax does not resolve for it. Add to `packages.yml` in your dbt project:
+
+```yaml
+packages:
+  - git: "https://github.com/zelloptt/dbt-snowflake-company-data.git"
+    revision: 0.1.0
+```
+
+Then `dbt deps`. Pin `revision` to a release tag, never to a branch. A branch
+moves under you and dbt warns about the unpinned dependency.
+
+One cost worth knowing: a git install clones the repository, and a clone ignores
+the `export-ignore` rules that keep development files out of a Package Hub
+install. `integration_tests/`, `.github/` and our contributor documentation land
+in your `dbt_packages/` alongside the package. None of it is parsed, since dbt
+reads only the paths this package's `dbt_project.yml` declares. It is heavier
+than it needs to be, and that is the whole of the problem.
+
+**Once the package is listed on the hub**, prefer this form. It is shorter, it
+resolves version ranges, and it delivers only the 38 files that are actually the
+package:
 
 ```yaml
 packages:
   - package: zelloptt/snowflake_company_data
     version: [">=0.1.0", "<0.2.0"]
 ```
-
-Then `dbt deps`.
 
 While pre-1.0, pin to a minor range. Breaking changes ship as minor bumps until 1.0.0, which is standard semver practice for 0.x and is why the upper bound matters. If your project uses `dependencies.yml` instead, add the same block there.
 
