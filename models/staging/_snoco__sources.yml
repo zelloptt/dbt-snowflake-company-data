@@ -1,0 +1,185 @@
+version: 2
+
+sources:
+  - name: snoco
+    description: >
+      Snowflake Public Data (Free), Marketplace listing GZTSZ290BV255. Nine of
+      the ~370 objects in the share: the company graph, the SEC filer index, the
+      two security indexes, and the geography lookup. NAICS is deliberately not
+      among them; see the note at the end of this file.
+
+      Defaults match the names Snowflake proposes when you acquire the listing,
+      so an install that takes the suggested database name needs no
+      configuration. Override `snoco_database` if you named it something else,
+      which you may well have, and `snoco_schema` only if you are reading a
+      replica rather than the share.
+
+      Note that `CYBERSYN` is also a valid schema in this listing and is the
+      wrong one: it is the older Financial Data Package layout and is missing
+      three of the nine objects below.
+
+    database: "{{ var('snoco_database', 'MARKETPLACE_CYBERSYN') }}"
+    schema: "{{ var('snoco_schema') }}"
+    loader: Snowflake Marketplace
+
+    # No freshness config here, deliberately. Nothing in the share carries a
+    # load timestamp, and LAST_ALTERED is documented as reflecting DDL and
+    # background metadata operations rather than data loads, so any freshness
+    # this package shipped would be a confident wrong answer.
+    #
+    # If you read a replica that does have a real anchor, turn it on from your
+    # own dbt_project.yml, which is also the only place you can express it:
+    #
+    #   sources:
+    #     snowflake_company_data:
+    #       snoco:
+    #         +loaded_at_field: cloned_at
+    #         +freshness:
+    #           warn_after: {count: 36, period: hour}
+    #           error_after: {count: 72, period: hour}
+    #
+    # It cannot be a package var. dbt parses schema YAML before it renders
+    # Jinja, so a {% if %} around a config block is a YAML syntax error rather
+    # than a conditional.
+
+    tables:
+      - name: company_index
+        description: >
+          One row per company. The spine everything else hangs off. 2.9M rows,
+          unique on company_id, covering public and private entities.
+        columns:
+          - name: company_id
+            description: "{{ doc('snoco_company_id') }}"
+          - name: company_name
+            description: "{{ doc('snoco_company_name') }}"
+          - name: entity_level
+            description: >
+              Constant 'Corporate' on every row. Carries no information and is
+              not surfaced downstream.
+          - name: ein
+            description: "{{ doc('snoco_ein') }}"
+          - name: cik
+            description: "{{ doc('snoco_cik') }}"
+          - name: lei
+            description: >
+              ARRAY of Legal Entity Identifiers. Populated on ~2% of rows. A
+              provider grouping bug gives 230 companies a shared array, the
+              largest holding 5,287 entries carried verbatim by 47 different
+              companies; see docs/DISCOVERY.md trap 1.
+          - name: permid_company_id
+            description: "{{ doc('snoco_permid_company_id') }}"
+          - name: primary_ticker
+            description: Primary exchange ticker. Populated on ~0.7% of rows.
+          - name: primary_exchange_code
+            description: Exchange code for primary_ticker.
+          - name: primary_exchange_name
+            description: Exchange name for primary_ticker.
+          - name: global_tickers
+            description: >
+              ARRAY, and NULL on all 2.9M rows. Not modelled. Do not confuse
+              with openfigi_security_index.global_tickers, which is populated.
+
+      - name: company_characteristics
+        description: >
+          Entity-attribute-value attributes per company, 11.7M rows across 15
+          relationship_type values. Not unique on (company_id,
+          relationship_type): ~1,900 companies carry multiple lei values.
+        columns:
+          - name: company_id
+            description: "{{ doc('snoco_company_id') }}"
+          - name: relationship_type
+            description: >
+              The attribute name. One of 15 values: company_name,
+              permid_company_id, cik, company_legal_structure, ein, lei,
+              sic_code, sic_description, sec_industry_group, and the six
+              business_address_* fields.
+          - name: value
+            description: The attribute value, always TEXT regardless of attribute.
+          - name: relationship_start_date
+            description: When the attribute was first observed.
+          - name: relationship_end_date
+            description: >
+              NULL on all 11.7M rows. There are no closed records, so filtering
+              on it to get "current" values is a no-op.
+
+      - name: company_domain_relationships
+        description: >
+          Company to owned web domain, 319K rows. Already normalised: no scheme,
+          no www., no path. Many-to-many, so neither side is unique.
+        columns:
+          - name: company_id
+            description: "{{ doc('snoco_company_id') }}"
+          - name: domain_id
+            description: Bare registrable domain, e.g. `sf-express.com`.
+
+      - name: company_relationships
+        description: >
+          Parent and subsidiary edges. 848 rows total, being the same 424
+          relationships stored in both directions. Coverage of the 2.9M spine is
+          about 0.015%, so treat the hierarchy as a bonus rather than a feature.
+        columns:
+          - name: company_id
+            description: "{{ doc('snoco_company_id') }}"
+          - name: related_company_id
+            description: The other end of the edge.
+          - name: relationship_type
+            description: 'Parent or Subsidiary. Each edge appears under both.'
+
+      - name: company_security_relationships
+        description: >
+          Company to the securities it issues, 986K rows. security_id is
+          type-qualified: its meaning depends on security_id_type, and four of
+          the five target columns are ARRAYs, so resolving it needs
+          ARRAY_CONTAINS rather than equality.
+        columns:
+          - name: company_id
+            description: "{{ doc('snoco_company_id') }}"
+          - name: security_id_type
+            description: >
+              One of openfigi_figi_id, openfigi_composite_id,
+              openfigi_share_class_id, permid_quote_id, permid_security_id.
+          - name: security_id
+            description: The identifier value, interpreted per security_id_type.
+
+      - name: sec_cik_index
+        description: >
+          SEC filer registry, 981K rows, unique on cik rather than company_id.
+          281,823 rows (28.7%) have a NULL company_id and cannot be joined to
+          the spine at all. The richest source of address and SIC industry.
+        columns:
+          - name: cik
+            description: "{{ doc('snoco_cik') }}"
+          - name: company_id
+            description: >
+              Foreign key to company_index, NULL on 28.7% of rows. Joining on
+              this silently drops those filers.
+          - name: sic
+            description: >
+              SIC industry code. Note the column is `sic`, not `sic_code`.
+              `sic_code` is a relationship_type value in company_characteristics,
+              which is a different thing.
+          - name: sic_code_category
+            description: Broad SIC category label.
+          - name: sic_code_description
+            description: SIC code description.
+
+      - name: openfigi_security_index
+        description: OpenFIGI security reference, 119K rows. Several ARRAY-typed identifier columns.
+
+      - name: permid_security_index
+        description: PermID security reference, 26K rows.
+
+      - name: geography_index
+        description: >
+          Geographic entity index, 573K rows from country down to census block
+          group, with ISO codes. Resolves the *_geo_id columns on sec_cik_index.
+        columns:
+          - name: geo_id
+            description: Opaque geography key. Unique.
+          - name: level
+            description: Granularity, e.g. Country, State, Zip.
+
+# NAICS_CODE_INDEX is deliberately not declared. It is a standalone NAICS
+# definition list with no join path to any company object in the free share,
+# so it cannot drive industry rollups here. Company industry comes from SIC
+# (sec_cik_index.sic) and sec_industry_group instead.

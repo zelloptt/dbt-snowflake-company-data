@@ -1,7 +1,7 @@
 # Snowflake Company Data dbt Package
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![dbt-core](https://img.shields.io/badge/dbt--core-%3E%3D1.10.0%20%3C3.0.0-orange.svg)](https://github.com/dbt-labs/dbt-core)
+[![dbt-core](https://img.shields.io/badge/dbt--core-%3E%3D1.10.8%20%3C3.0.0-orange.svg)](https://github.com/dbt-labs/dbt-core)
 [![Warehouse: Snowflake](https://img.shields.io/badge/warehouse-Snowflake-29B5E8.svg)](https://www.snowflake.com/)
 [![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-yellow.svg)](CHANGELOG.md)
 
@@ -13,7 +13,7 @@ Turn Snowflake's free public company data into a modeling layer you can actually
 
 ## Why This Exists
 
-Snowflake gives away a reference spine of roughly 100,000 public and private companies, plus SEC filings, security identifiers, and geography, at no cost through the Marketplace. The data is genuinely useful and the raw shape is genuinely awkward:
+Snowflake gives away a reference spine of **2.9 million** public and private companies, plus SEC filings, security identifiers, and geography, at no cost through the Marketplace. The data is genuinely useful and the raw shape is genuinely awkward:
 
 - Company attributes are stored **entity-attribute-value**, so industry classification is a row filter, not a column.
 - Some identifiers are **ARRAY-typed**, so a company can carry several LEIs and a naive join fans out.
@@ -23,14 +23,32 @@ This package absorbs that complexity once so you do not have to solve it in ever
 
 ## What It Does
 
-| Layer | What you get |
-|---|---|
-| **Staging** | One model per source table. Renamed, typed, documented. Nothing else. |
-| **Entities** | A one-row-per-company spine, a tidy identifier table, resolved characteristics, industry rollups, and securities. |
-| **Matching** | Deterministic identifier joins plus blocked fuzzy name matching, so you can attach your own CRM records to the public spine. |
-| **Macros** | Company name normalization, match scoring, and blocking, usable on their own. |
+| Model | Grain | Rows |
+|---|---|---|
+| `snoco__companies` | one row per company | 2,918,929 |
+| `snoco__company_identifiers` | company + identifier type + value | 3,913,860 |
+| `snoco__company_domains` | company + domain | 319,269 |
+| `snoco__company_securities` | company + security type + id | 985,971 |
+| `snoco__company_hierarchy` | one row per root-to-company path | 713 |
+| `snoco__company_match_candidates` | your record + company + method | opt-in |
+| `snoco__company_match` | one row per matched record of yours | opt-in |
 
-Full model list arrives with the first release. See [DECISIONLOG.md](DECISIONLOG.md) for the reasoning behind each modeling choice.
+Nine staging models sit underneath, one per source object, renamed and typed and
+nothing else. Three public macros are usable on their own:
+`normalize_company_name`, `normalize_domain` and `company_name_similarity`.
+(The blocking key is `_blocking_key`, which is private: the leading underscore
+means it is an implementation detail of the matching models and its signature
+may change in a patch release.)
+
+Row counts are from the free share as of 2026-08-08 and will drift.
+
+Two things the table above will not tell you, so they are said here. The
+**hierarchy is nearly empty**: 424 edges against 2.9M companies, roughly 0.015%
+coverage. And there is **no employee count and no revenue** anywhere in the free
+share, so this is an enrichment and resolution layer, not a prospecting
+database.
+
+See [DECISIONLOG.md](https://github.com/zelloptt/dbt-snowflake-company-data/blob/main/DECISIONLOG.md) for the reasoning behind each modeling choice.
 
 ## Warehouse Support
 
@@ -43,10 +61,10 @@ Two setup steps account for essentially every "it does not work" report. Do both
 **1. Get the data.** Acquire the [Snowflake Public Data (Free)](https://app.snowflake.com/marketplace/listing/GZTSZ290BV255) listing in your account. Your organization must accept Snowflake's provider and consumer terms at the ORGADMIN level first; you cannot obtain the listing until that happens.
 
 ```sql
-CREATE DATABASE IF NOT EXISTS SNOWFLAKE_PUBLIC_DATA_FREE FROM LISTING 'GZTSZ290BV255';
+CREATE DATABASE IF NOT EXISTS MARKETPLACE_CYBERSYN FROM LISTING 'GZTSZ290BV255';
 ```
 
-The database name is yours to choose at install time. Whatever you pick, tell the package about it (see [Configure](#configure)).
+`MARKETPLACE_CYBERSYN` is the name Snowflake proposes and the name this package defaults to. You may pick another; if you do, tell the package (see [Configure](#configure)).
 
 **2. Grant access to your dbt role.** By default *only the role that created the database can read it*. This is the single most common failure:
 
@@ -70,13 +88,55 @@ While pre-1.0, pin to a minor range. Breaking changes ship as minor bumps until 
 
 ## Configure
 
-At minimum, point the package at your copy of the share:
+The defaults match the names Snowflake proposes when you acquire the listing:
 
 ```yaml
 vars:
   snowflake_company_data:
-    snoco_database: MY_PUBLIC_DATA_DB    # defaults to SNOWFLAKE_PUBLIC_DATA_FREE
-    snoco_schema: PUBLIC_DATA_FREE       # provider-controlled, rarely changes
+    snoco_database: MARKETPLACE_CYBERSYN   # default
+    snoco_schema: PUBLIC_DATA_FREE         # default
+```
+
+If you accepted the suggested database name, there is nothing to configure. If
+you named it something else, which the `CREATE DATABASE ... FROM LISTING`
+statement lets you do, set `snoco_database` to match.
+
+> **`CYBERSYN` is also a schema in this listing, and it is the wrong one.** It
+> is the older Financial Data Package layout and carries only 6 of the 9 objects
+> this package reads: `COMPANY_CHARACTERISTICS`, `COMPANY_DOMAIN_RELATIONSHIPS`
+> and `SEC_CIK_INDEX` are absent, which is every company attribute, every
+> domain, and all SIC and address data. Use `PUBLIC_DATA_FREE`.
+
+| You read | `snoco_database` | `snoco_schema` |
+|---|---|---|
+| The share, default name | `MARKETPLACE_CYBERSYN` | `PUBLIC_DATA_FREE` |
+| The share, your own name | whatever you named it | `PUBLIC_DATA_FREE` |
+| Your own replica of it | your database | your schema |
+
+A replica is worth considering. The share exposes secure views whose
+`ROW_COUNT` and `BYTES` are `NULL`, so nothing downstream can reason about
+size, and no object in it carries a load timestamp of any kind. Cloning the nine
+objects this package reads into your own schema costs little and gives you both
+back.
+
+### Source freshness
+
+Not configured by this package, deliberately: nothing in the share carries a
+load timestamp, and `LAST_ALTERED` reflects DDL and background metadata
+operations rather than data loads, so any freshness shipped here would be a
+confident wrong answer.
+
+If you read a replica that has a real anchor, turn it on from your own
+`dbt_project.yml`:
+
+```yaml
+sources:
+  snowflake_company_data:
+    snoco:
+      +loaded_at_field: cloned_at
+      +freshness:
+        warn_after: {count: 36, period: hour}
+        error_after: {count: 72, period: hour}
 ```
 
 ### Output schemas
@@ -117,7 +177,7 @@ Disabled by default because it needs to know where your data lives. Point it at 
 vars:
   snowflake_company_data:
     snoco_matching_enabled: true
-    snoco__match_source: "ref('dim_accounts')"
+    snoco__match_source: dim_accounts      # a model name, resolved with ref()
     snoco__match_id_column: account_id
     snoco__match_name_column: account_name
     snoco__match_domain_column: website_domain
@@ -125,13 +185,41 @@ vars:
     snoco__match_max_candidates: 5
 ```
 
-Two models come out: `snoco__company_match_candidates` for review, and `snoco__company_match` with one deterministic best match per input row.
+`snoco__match_source` takes either a model name, resolved with `ref()`, or a
+fully qualified relation such as `analytics.crm.dim_accounts` if you would
+rather point at a raw table than wrap it in a model. Anything containing a dot
+is treated as the latter.
 
-Full variable reference lands with the first release.
+Two models come out. `snoco__company_match_candidates` keeps every plausible
+company with the evidence that produced it, for review.
+`snoco__company_match` picks one winner per input row.
+
+Matching runs two methods and keeps them separate rather than blending them
+into one number:
+
+- **domain** is deterministic and scored `1.0`. Your domain equals a domain the
+  share attributes to that company. `snoco__match_min_score` does not apply,
+  because a domain match is an identity assertion rather than a similarity.
+  Domains that resolve to several companies are still returned, flagged
+  `is_shared_domain`, so the ambiguity is visible instead of arbitrarily
+  resolved.
+- **name** is fuzzy and blocked. Only companies sharing a cheap blocking key
+  with your normalised name are scored at all, which is what makes the thing
+  finish against a 2.9M-row spine. The cost is recall: two names that differ in
+  their first four characters can never match, so `ibm` will not find
+  `international business machines`. Run domain matching alongside it.
+
+Rows where the runner-up scored within `snoco__match_ambiguity_margin` of the
+winner are flagged `is_ambiguous`. The winner is still a real answer, just not a
+confident one.
+
+Input rows with no candidate above the threshold are **absent** from
+`snoco__company_match` rather than present with a null `company_id`, so a left
+join from your own table gives you the unmatched set without a filter.
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](https://github.com/zelloptt/dbt-snowflake-company-data/blob/main/CONTRIBUTING.md).
 
 ## Data, Attribution, and Licensing
 

@@ -1,0 +1,6 @@
+company_id,company_name,security_id_type,security_id,security_name
+C1,Aurora Robotics Inc.,openfigi_figi_id,BBG000FAKE001,Aurora Robotics Common
+C1,Aurora Robotics Inc.,openfigi_composite_id,BBG000COMP001,Aurora Robotics Composite
+C5,Dunmore Analytics Corporation,permid_security_id,PSEC0001,Dunmore Analytics Common
+C5,Dunmore Analytics Corporation,permid_quote_id,PQUOTE0001,Dunmore Analytics Quote
+C2,Borealis Freight Group Ltd,openfigi_figi_id,BBG000UNKNOWN,Unresolvable On Purpose

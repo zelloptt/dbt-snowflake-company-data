@@ -1,0 +1,57 @@
+name: 'snoco_integration_tests'
+version: '0.1.0'
+config-version: 2
+profile: 'snoco_integration_tests'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# The package's staging models deliberately ref() nodes in THIS project, because
+# that is what the source-relation vars point them at. dbt warns about the
+# package-depends-on-root direction as a possible cycle risk; there is no cycle
+# here (fixtures feed the package, the package feeds our tests), and this flag
+# makes ref() resolve inside the package first, which silences the warning
+# without changing where our explicitly-named fixtures resolve.
+flags:
+  require_ref_searches_node_package_before_root: true
+
+# Every source the package reads is repointed at a synthetic fixture. This is
+# the whole point of the package exposing one relation var per source object:
+# no package code changes, no live share, no Marketplace listing required to
+# run the suite.
+#
+# Six sources point straight at a seed. Three go through a thin input model
+# first, because their real columns are ARRAY-typed and a CSV seed cannot
+# express an ARRAY. Those models parse a delimited string into one.
+vars:
+  snowflake_company_data:
+    snoco_company_index:                  "{{ ref('input_company_index') }}"
+    snoco_openfigi_security_index:        "{{ ref('input_openfigi_security_index') }}"
+    snoco_permid_security_index:          "{{ ref('input_permid_security_index') }}"
+    snoco_company_characteristics:        "{{ ref('snoco_seed_company_characteristics') }}"
+    snoco_company_domain_relationships:   "{{ ref('snoco_seed_company_domains') }}"
+    snoco_company_relationships:          "{{ ref('snoco_seed_company_relationships') }}"
+    snoco_company_security_relationships: "{{ ref('snoco_seed_company_securities') }}"
+    snoco_sec_cik_index:                  "{{ ref('snoco_seed_sec_cik_index') }}"
+    snoco_geography_index:                "{{ ref('snoco_seed_geography_index') }}"
+
+    # Matching runs against a synthetic CRM table so the whole opt-in path is
+    # exercised rather than merely parsed.
+    snoco_matching_enabled: true
+    snoco__match_source: input_crm_accounts
+    snoco__match_id_column: account_id
+    snoco__match_name_column: account_name
+    snoco__match_domain_column: website
+
+    # The fixture deliberately contains one company over the guard, so the
+    # baseline is 1 rather than the 230 the real share carries.
+    snoco__expected_oversized_lei_arrays: 1
+    snoco__oversized_lei_array_tolerance: 0
+
+seeds:
+  snoco_integration_tests:
+    +quote_columns: false
+    +schema: snoco_fixtures

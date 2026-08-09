@@ -1,0 +1,7 @@
+geo_id,geo_name,level,iso_name,iso_alpha2,iso_alpha3,iso_numeric_code,iso_3166_2_code
+GEO_US,United States,Country,United States of America,US,USA,840,
+GEO_GB,United Kingdom,Country,United Kingdom,GB,GBR,826,
+GEO_US_TX,Texas,State,,,,,US-TX
+GEO_US_NY,New York,State,,,,,US-NY
+GEO_US_CO,Colorado,State,,,,,US-CO
+GEO_US_MD,Maryland,State,,,,,US-MD

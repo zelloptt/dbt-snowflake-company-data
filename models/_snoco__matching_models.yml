@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: snoco__company_match_candidates
+    description: >
+      Each record represents one plausible company for one of your records,
+      with the evidence that produced it. Review surface; join
+      snoco__company_match when you want a single answer per input row.
+
+      Disabled unless snoco_matching_enabled is true and snoco__match_source is
+      configured.
+    columns:
+      - name: match_input_id
+        description: "{{ doc('snoco_match_input_id') }}"
+        data_tests:
+          - not_null
+      - name: company_id
+        description: The candidate company.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('snoco__companies')
+                field: company_id
+      - name: match_method
+        description: How the candidate was found.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['domain', 'name']
+      - name: match_score
+        description: >
+          1.0 for a domain match, which is an identity assertion rather than a
+          similarity. For a name match, the blended Jaro-Winkler and normalised
+          edit distance score on 0..1.
+        data_tests:
+          - not_null
+      - name: match_evidence
+        description: The domain or normalised name the candidate was found by.
+      - name: candidate_rank
+        description: 1 is the best candidate for this input row.
+        data_tests:
+          - not_null
+
+  - name: snoco__company_match
+    description: >
+      Each record represents the single best company for one of your records.
+      Input rows with no candidate above the threshold are absent rather than
+      present with a null company_id, so a left join from your own table gives
+      you the unmatched set without a filter.
+    columns:
+      - name: match_input_id
+        description: Your identifier. One row per input row that matched.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('snoco__companies')
+                field: company_id
+      - name: match_score
+        data_tests:
+          - not_null
+      - name: runner_up_score
+        description: Score of the second-best candidate, NULL when there was only one.
+      - name: is_ambiguous
+        description: >
+          True when the runner-up scored within snoco__match_ambiguity_margin of
+          the winner. The winner is still a real answer, just not a confident
+          one, and these are the rows worth a human look.

@@ -1,0 +1,2 @@
+permid_security_id,primary_ticker,security_name,asset_class,primary_exchange_code,primary_exchange_name,security_status,permid_quote_id_raw,global_tickers_raw
+PSEC0001,DUNM,Dunmore Analytics Common Stock,Equity,XNYS,NYSE,Active,PQUOTE0001|PQUOTE0002,DUNM US

@@ -1,0 +1,39 @@
+# Job name must stay `fusion`; branch protection requires this exact context.
+#
+# The dbt Package Hub shows a Fusion-compatible badge and computes it by parsing
+# the package with Fusion. This lane is how we find out before the hub does.
+#
+# Parse only, and therefore no secrets. That is what lets it be a required check
+# without locking out contributors working from a fork, which GitHub never gives
+# secrets to. The CI profile supplies placeholder defaults so the profile loads;
+# Fusion refuses to parse at all without a `database` field, which is what made
+# this lane fail before the defaults existed.
+name: fusion
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: fusion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fusion:
+    name: fusion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dbt Fusion
+        run: |
+          curl -fsSL https://public.cdn.getdbt.com/fs/install/install.sh | sh -s -- --update
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Fusion version
+        run: dbt --version
+      - name: dbt deps
+        working-directory: integration_tests
+        run: dbt deps --profiles-dir ./ci
+      - name: dbt parse
+        working-directory: integration_tests
+        run: dbt parse --profiles-dir ./ci

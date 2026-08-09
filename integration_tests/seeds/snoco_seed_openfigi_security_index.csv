@@ -1,0 +1,3 @@
+top_level_openfigi_id,top_level_openfigi_id_type,primary_ticker,security_name,asset_class,security_type_raw,global_tickers_raw,openfigi_figi_id_raw,openfigi_composite_id_raw,openfigi_share_class_id_raw,exchange_codes_raw
+OFG001,composite,AURO,Aurora Robotics Common Stock,Equity,Common Stock,AURO US,BBG000FAKE001|BBG000FAKE002,BBG000COMP001,BBG000SHARE01,XNAS
+OFG002,composite,OTHR,Unrelated Security,Equity,Common Stock,OTHR US,BBG000OTHER01,BBG000COMP002,BBG000SHARE02,XNYS

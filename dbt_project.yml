@@ -2,11 +2,20 @@ name: 'snowflake_company_data'
 version: '0.1.0'
 config-version: 2
 
-# The <3.0.0 ceiling is deliberate. The dbt Fusion engine reports itself as
-# version 2.x, so a <2.0.0 ceiling costs the Fusion-compatible badge on the
+# The >=1.10.8 floor is not cosmetic and is not a guess. Generic tests in this
+# package nest their arguments under `arguments:`, which dbt only accepts once
+# the require_generic_test_arguments_property behaviour flag defaults true, and
+# that happened in 1.10.8. Measured, not read: dbt-core 1.10.7 fails to parse
+# this package with
+#   macro 'dbt_macro__test_relationships' takes no keyword argument 'arguments'
+# and 1.10.8 parses clean. The floor was >=1.10.0 until that was tested, which
+# claimed support for eight patch releases the package does not work on.
+#
+# The <3.0.0 ceiling is equally deliberate. The dbt Fusion engine reports itself
+# as version 2.x, so a <2.0.0 ceiling costs the Fusion-compatible badge on the
 # dbt Package Hub and makes Fusion warn (and eventually error) on install.
-# Do not narrow this without reading RELEASE.md first.
-require-dbt-version: [">=1.10.0", "<3.0.0"]
+# Do not narrow either bound without reading RELEASE.md first.
+require-dbt-version: [">=1.10.8", "<3.0.0"]
 
 model-paths: ["models"]
 macro-paths: ["macros"]
@@ -22,22 +31,53 @@ vars:
     # ------------------------------------------------------------------
     # Source location
     #
+    # Defaults match what Snowflake proposes when you acquire the listing, so
+    # a consumer who takes the suggested database name gets a package that
+    # works with no configuration at all.
+    #
     # snoco_database is deliberately NOT declared here. If a package declares
     # a var as null in its own dbt_project.yml, var('snoco_database', default)
     # resolves to null rather than falling back, because the var IS defined.
     # Leaving it undeclared lets the var() default in the sources file work.
-    # The default is SNOWFLAKE_PUBLIC_DATA_FREE, not target.database, because
-    # the share is a separate database from the user's build database.
+    # It is never target.database: the data lives in a separate database from
+    # the user's build database, whether that is the Marketplace share itself
+    # or a local replica of it.
+    #
+    # The schema is PUBLIC_DATA_FREE and not CYBERSYN. Both schemas exist in
+    # this listing, which is a genuine trap: CYBERSYN is the older Financial
+    # Data Package layout and carries only 6 of the 9 objects this package
+    # reads. COMPANY_CHARACTERISTICS, COMPANY_DOMAIN_RELATIONSHIPS and
+    # SEC_CIK_INDEX are absent from it, which is every company attribute,
+    # every domain, and all SIC and address data. Verified by querying both.
     # ------------------------------------------------------------------
     snoco_schema: 'PUBLIC_DATA_FREE'
 
     # ------------------------------------------------------------------
-    # Source table identifiers
-    # Generated from live introspection. See DISCOVERY.md.
-    # These exist so the integration test project can repoint every source
-    # at a seed without touching package code.
+    # Source relations
+    #
+    # One var per source object, each defaulting to the declared source. Any
+    # single table can be repointed at an arbitrary relation without touching
+    # package code, which is what lets the integration test project swap every
+    # source for a synthetic seed.
+    #
+    # This is the pattern Fivetran's packages use, and the reason to copy it
+    # rather than pass identifiers is that a whole relation covers the cases an
+    # identifier cannot: a table in a different database, a view, a seed.
+    #
+    # Verified, because it looks like it should break lineage and does not: the
+    # source() call is rendered in the consuming model's context, so dbt still
+    # records source.snowflake_company_data.snoco.<table> in depends_on. The
+    # DAG is identical to a direct source() reference.
     # ------------------------------------------------------------------
-    # snoco_company_index_identifier: 'company_index'
+    snoco_company_index:                 "{{ source('snoco', 'company_index') }}"
+    snoco_company_characteristics:       "{{ source('snoco', 'company_characteristics') }}"
+    snoco_company_domain_relationships:  "{{ source('snoco', 'company_domain_relationships') }}"
+    snoco_company_relationships:         "{{ source('snoco', 'company_relationships') }}"
+    snoco_company_security_relationships: "{{ source('snoco', 'company_security_relationships') }}"
+    snoco_sec_cik_index:                 "{{ source('snoco', 'sec_cik_index') }}"
+    snoco_openfigi_security_index:       "{{ source('snoco', 'openfigi_security_index') }}"
+    snoco_permid_security_index:         "{{ source('snoco', 'permid_security_index') }}"
+    snoco_geography_index:               "{{ source('snoco', 'geography_index') }}"
 
     # ------------------------------------------------------------------
     # Enablement flags (single underscore)
@@ -65,8 +105,30 @@ vars:
     snoco__match_ticker_column: null
     snoco__match_min_score: 0.90
     snoco__match_max_candidates: 5
+
+    # A winner whose runner-up scored within this margin is flagged
+    # is_ambiguous in snoco__company_match. It does not change which row wins,
+    # it marks the rows where the win was close enough to be worth checking.
+    snoco__match_ambiguity_margin: 0.02
     snoco__hierarchy_max_depth: 10
-    snoco__source_freshness_enabled: false
+
+    # Identifier arrays in COMPANY_INDEX are mostly single-valued, but a
+    # provider-side grouping bug gives 230 companies a shared LEI array, the
+    # largest holding 5,287 entries and carried verbatim by 47 different
+    # companies. Flattening those unguarded adds 270,001 rows that assert
+    # ownership of identifiers the company does not hold. Arrays longer than
+    # this are dropped rather than fanned out, and a warn-severity test reports
+    # how many. See docs/DISCOVERY.md trap 1.
+    snoco__max_identifier_array_size: 25
+
+    # The count of oversized LEI arrays we already know about, and how far it
+    # may move before the guard test speaks up. The test watches for DRIFT from
+    # this baseline rather than for the defect itself, because the defect is
+    # permanent, is the provider's, and warning about it on every build trains
+    # everyone to ignore the warning. Set the baseline to 0 to warn whenever any
+    # oversized array exists.
+    snoco__expected_oversized_lei_arrays: 230
+    snoco__oversized_lei_array_tolerance: 50
 
     # ------------------------------------------------------------------
     # Engine escape hatch
@@ -74,16 +136,26 @@ vars:
     # ------------------------------------------------------------------
     deactivate_for_fusion: false
 
+# Layout follows the shape the ecosystem has settled on, most visibly in
+# Fivetran's packages: marts live directly in models/, staging and intermediate
+# in subdirectories. Anything at the root of models/ is a model this package
+# publishes and a consumer may reference; everything below it is plumbing.
+#
+# No models/staging/tmp/ layer. Fivetran's exists to give
+# fill_staging_columns a relation to introspect and to union multiple
+# connectors. We do neither: there is one share, every consumer reads the same
+# objects, and CLAUDE.md ground rule 7 rejects the schema-drift shim outright.
+# A tmp layer here would be indirection with nothing on the other end.
 models:
   snowflake_company_data:
     +materialized: table
     +schema: snowflake_company_data
     staging:
+      # Views, not tables. Fivetran materialises staging because theirs unpacks,
+      # casts and back-fills missing columns. Ours is a rename and a cast over a
+      # source that is already materialised, so a table would be a second copy
+      # of 16M rows earning nothing.
       +materialized: view
       +schema: stg_snowflake_company_data
     intermediate:
       +materialized: ephemeral
-    companies:
-      +materialized: table
-    matching:
-      +materialized: table

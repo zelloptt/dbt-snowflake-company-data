@@ -1,0 +1,65 @@
+# =============================================================================
+# What a consumer actually receives when they install this package.
+#
+# A dbt Package Hub install does not clone this repository. The hub's registry
+# entry carries a `downloads.tarball` URL pointing at GitHub's source tarball
+# endpoint (https://codeload.github.com/<org>/<repo>/tar.gz/<tag>); dbt
+# downloads that tarball and untars it straight into the consumer's
+# dbt_packages/ directory. Those tarballs are `git archive` output, and
+# `git archive` omits every path marked `export-ignore`. So anything listed
+# below never lands in anyone else's project.
+#
+# This was verified, not assumed. Commands and output are in
+# docs/INSTALL_FOOTPRINT.md.
+#
+# Two limits to know before editing this file:
+#
+#   - A `git:` install clones the repo, so it ignores export-ignore entirely
+#     and delivers everything here. That is a real gap, but the README
+#     recommends the hub install and hub installs are the large majority.
+#
+#   - Local development installs the package with `- local: ../`, which dbt
+#     resolves to a *symlink* into the working tree. export-ignore cannot
+#     affect a symlink, so nothing in this file can break integration_tests/.
+#
+# Rule of thumb: if dbt does not parse it and a licence does not require it,
+# it does not ship.
+# =============================================================================
+
+# A complete dbt project that installs this package from `../`. The largest
+# single exclusion and the one that grows fastest as the test suite fills in.
+/integration_tests/  export-ignore
+
+# CI workflows, issue templates, PR template, CODEOWNERS.
+/.github/            export-ignore
+
+# Working documents. Also the guard rail for generated dbt docs: never commit
+# catalog.json, manifest.json or index.html to the default branch outside a
+# path excluded here. Committed docs artifacts are the single biggest source
+# of bloat in published packages (they are 69% of fivetran/dbt_hubspot).
+/docs/               export-ignore
+
+# Contributor-facing documentation. Someone debugging inside dbt_packages/
+# needs README.md and CHANGELOG.md. They do not need our conventions file,
+# our contribution guide, our decision log, or our release runbook.
+/CLAUDE.md           export-ignore
+/CONTRIBUTING.md     export-ignore
+/DECISIONLOG.md      export-ignore
+/RELEASE.md          export-ignore
+
+# Repo plumbing that carries no meaning inside dbt_packages/.
+/.gitattributes      export-ignore
+/.gitignore          export-ignore
+
+# -----------------------------------------------------------------------------
+# Everything not listed above ships, deliberately:
+#
+#   dbt_project.yml, packages.yml    dbt parses them
+#   models/ macros/ seeds/ tests/    the configured paths
+#   snapshots/ analyses/
+#   LICENSE                          Apache 2.0 requires the licence to
+#                                    accompany distributions; non-negotiable
+#   README.md                        the first thing read when debugging
+#                                    inside dbt_packages/
+#   CHANGELOG.md                     answers "which version am I on"
+# -----------------------------------------------------------------------------
