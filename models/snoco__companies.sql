@@ -85,7 +85,7 @@ joined as (
         cast(null as {{ dbt.type_string() }})                    as sec_filer_category,
         cast(null as {{ dbt.type_string() }})                    as incorporation_state,
         cast(null as {{ dbt.type_string() }})                    as incorporation_country,
-        cast(null as boolean)                                    as is_sec_filer,
+        cast(null as {{ dbt.type_boolean() }})                    as is_sec_filer,
         {% endif %}
 
         attributes.sec_industry_group,

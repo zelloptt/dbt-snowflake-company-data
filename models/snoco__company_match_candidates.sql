@@ -54,7 +54,7 @@ domain_matches as (
         match_input.match_input_id,
         company_domains.company_id,
         'domain'                                    as match_method,
-        cast(1.0 as float)                          as match_score,
+        cast(1.0 as {{ dbt.type_float() }})          as match_score,
         company_domains.domain                      as match_evidence,
         company_domains.is_shared_domain
     from match_input
@@ -91,10 +91,10 @@ name_matches as (
             {{ snowflake_company_data.company_name_similarity(
                 'match_input_name_normalized',
                 'company_name_normalized'
-            ) }} as float
+            ) }} as {{ dbt.type_float() }}
         ) as match_score,
         company_name_normalized as match_evidence,
-        cast(null as boolean)   as is_shared_domain
+        cast(null as {{ dbt.type_boolean() }}) as is_shared_domain
     from blocked_pairs
 
 ),

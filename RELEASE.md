@@ -49,16 +49,88 @@ rewriting history, not because something is reading the file today.
 6. A GitHub release is not required for `dbt deps` to resolve the version, only the tag is. It is required for the Package Hub listing and it is what a human reads, so do it anyway.
 7. hubcap indexes hourly and opens a PR against `hub.getdbt.com`. Expect the new version to appear within a business day. Until the package is listed (see below), the tag is still what makes a `git:`-style install work.
 
-## Before the first public release
+## Compliance with hubcap's best practices
 
-Do not submit to the dbt Package Hub the day the package is finished. hubcap's best practices, updated 2026-08-05, require:
+[`package-best-practices.md`](https://github.com/dbt-labs/hubcap/blob/main/package-best-practices.md)
+is what a hub reviewer checks against. Its key words are RFC 2119, so MUST is a
+gate and SHOULD is a recommendation you may deviate from with a reason.
+
+Audited 2026-08-08 against the file as of that date. Re-run this table before
+submitting, because the document changes.
+
+| Requirement | Level | State |
+|---|---|---|
+| Author satisfied with production behaviour at submission | MUST | **Open.** The only item that code cannot close. See below. |
+| Used in the author's own production environment for an extended period | SHOULD | **Open.** Same. |
+| Git history more extensive than "initial commit" | SHOULD | Met |
+| Licence file detectable by GitHub | MUST | Met. `LICENSE` at root; the GitHub API reports `apache-2.0` |
+| README explaining getting started and customisation | SHOULD | Met |
+| Documentation indicates supported warehouses | SHOULD | Met. "Snowflake only", with the reason |
+| No hard-coded table references; `ref`/`source` instead | MUST | Met. Every relation is a CTE, a `ref()`, or a var defaulting to `source()`. Verified by grep: no bare dotted identifier in any `from` or `join` |
+| Mechanism to enable/disable subsets | MAY | Met. Five `_enabled` flags |
+| Mechanism to customise source table location | SHOULD | Met. `snoco_database`, `snoco_schema`, and a relation var per object |
+| Does not assume database/schema names in sources | SHOULD | Met. Both are overridable vars. They carry defaults, which is not the same as assuming; see ground rule 2 in `CLAUDE.md` |
+| Assumes table names | MAY | Yes, deliberately. Explicitly permitted, and the objects come from a known listing |
+| `require-dbt-version` declared | MUST | Met. `[">=1.10.8", "<3.0.0"]` |
+| Allows subsequent minor and patch releases | SHOULD | Met, and wider: the ceiling also admits Fusion's 2.x |
+| Dependencies imported from the hub, not git | SHOULD | Not applicable. `packages: []` |
+| Widest possible dependency range, no patch pins | SHOULD | Not applicable. Same |
+| Does not override dbt Core behaviour affecting other resources | MUST | Met. Five macros, all distinctly named, none of them a dbt hook; vars and model configs namespaced under `snowflake_company_data`; all 13 doc blocks `snoco_`-prefixed |
+| Uses dbt Core cross-database macros where available | SHOULD | Partial, deliberately. See below |
+| Disambiguated resource names | SHOULD | Met. The `snoco` infix on every model, test, and doc block |
+| Git tags validate against hubcap's `version.py` | MUST | `0.1.0` matches the official semver regex hubcap uses |
+| Follows Semantic Versioning 2.0.0 | SHOULD | Met |
+| Production-ready packages at 1.0.0 or above | SHOULD (note) | **Deviation.** Submitting at 0.1.0; decide before submitting |
+
+### The two open items
+
+Both are the same item: hubcap wants the package to have earned its release.
+Nothing in this repo can satisfy them, and they are the reason not to submit on
+the day the package is finished.
 
 > Packages SHOULD have been used in the author's own production environment for an extended period of time before being submitted. Packages SHOULD contain git history more extensive than "initial commit", demonstrating changes made based on the author's experience with the package instead of a one-shotted project.
 
-So: run it against real data, fix what breaks, and let the commit history reflect that.
+Run it against real data, fix what breaks, and let the commit history reflect
+that. The history condition is already met and was met honestly.
+
+### The cross-database macro deviation
+
+hubcap SHOULDs the use of dbt Core's cross-database macros. This package uses
+`dbt.type_string()`, `dbt.type_boolean()`, `dbt.type_float()` and `dbt.hash()`,
+and does not use `dbt.concat()`, `dbt.length()` or `dbt.split_part()`, writing
+`||`, `length()` and `split_part()` directly instead.
+
+The reason is ground rule 9 in `CLAUDE.md`: this package is Snowflake-only by
+necessity, because the data source is a Snowflake Marketplace share. A portable
+wrapper around a function that will only ever compile for one adapter is
+indirection with nothing behind it. Type macros are different and are used
+everywhere they apply, because they cost nothing and keep a door open.
+
+`cast(... as date)` in three staging models stays literal because dbt Core has
+no `type_date` macro. Verified against dbt-core 1.10.8, the floor: the available
+set is `type_bigint`, `type_boolean`, `type_float`, `type_int`, `type_numeric`,
+`type_string`, `type_timestamp`.
+
+This is a considered deviation from a SHOULD, which RFC 2119 allows. If a
+reviewer pushes back, the swap is mechanical.
+
+### The 1.0.0 question
+
+hubcap notes that production-ready packages should be 1.0.0 or above. This
+package is 0.1.0 and the README tells consumers it is pre-1.0 with an interface
+that may move.
+
+Both positions are honest; they just cannot both be held at submission. Either
+run it in production long enough to mean 1.0.0 and submit at 1.0.0, or submit at
+0.x and accept that the listing reads as pre-release. Decide deliberately rather
+than by default, and if the answer is 1.0.0, the pin guidance in the versioning
+table above changes with it.
 
 ## First-time hub submission
 
+0. Re-run the compliance table above against the current
+   `package-best-practices.md`, and close the two open items. Everything below
+   assumes that passed.
 1. `uvx dbt-autofix deprecations`, commit the result.
 2. `uvx dbt-autofix packages --dry-run` to check our own dependencies. Keep `--dry-run`; without it the tool rewrites `packages.yml` in place.
 3. Confirm the Fusion lane is green.

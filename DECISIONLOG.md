@@ -533,3 +533,53 @@ because the alternative right now is an install that does not work at all.
 
 **Revisit when:** the hubcap PR lands and the listing exists. At that point the
 two blocks swap places and the git install becomes the footnote.
+
+---
+
+## Audited against hubcap's package best practices
+
+Every requirement in
+[`package-best-practices.md`](https://github.com/dbt-labs/hubcap/blob/main/package-best-practices.md)
+was checked against the repo rather than against memory of it. The result table
+lives in `RELEASE.md`, next to the submission runbook where it will actually be
+re-read. Recorded here is what changed and what was decided.
+
+**One real gap, fixed.** Four casts used literal `boolean` and `float` where dbt
+Core has `type_boolean()` and `type_float()`. Both exist at the `>=1.10.8` floor,
+confirmed by listing the type macros in dbt-core 1.10.8 itself, and both render
+byte-identically on Snowflake (`SnowflakeColumn.translate_type` returns `float`
+and `boolean` unchanged), so the change is convention with no behavioural risk.
+The three `cast(... as date)` casts in staging stay literal: dbt Core has no
+`type_date`.
+
+**One rule in `CLAUDE.md` was wrong and is corrected.** Ground rule 2 said
+"never hard-code a database or schema name, hubcap makes this a MUST". hubcap's
+MUST is narrower and is about *table references*: use `ref` or `source`. For
+database and schema it says only SHOULD NOT *assume*, which an overridable var
+satisfies whether or not it carries a default.
+
+The distinction is not academic. Read the old wording literally and you would
+delete the `MARKETPLACE_CYBERSYN` and `PUBLIC_DATA_FREE` defaults to comply with
+a MUST that does not exist, undoing `af28dee` and returning the package to
+requiring configuration before it works at all.
+
+**One deliberate deviation from a SHOULD.** hubcap recommends dbt Core's
+cross-database macros. Type macros are used everywhere they apply. Function
+macros, `dbt.concat()`, `dbt.length()`, `dbt.split_part()`, are not: this package
+is Snowflake-only because its data source is a Snowflake Marketplace share, so a
+portable wrapper around a function that will only ever compile for one adapter
+is indirection with nothing behind it. That is ground rule 9, and RFC 2119 SHOULD
+allows a deviation that has been weighed. Written down so the next reviewer sees
+a decision rather than an oversight.
+
+**One open question, not ours to settle here.** hubcap notes that
+production-ready packages should be at 1.0.0 or above. This package is 0.1.0 and
+says so. Both are honest and they conflict only at submission, so `RELEASE.md`
+states the choice rather than pretending it does not exist.
+
+Everything else already passed, including the two MUSTs most likely to fail
+silently: no hard-coded table reference anywhere (every `from` and `join` target
+is a CTE, a `ref()`, or a var defaulting to `source()`), and nothing that
+overrides dbt Core behaviour for resources this package did not create (five
+distinctly named macros, none a dbt hook; vars and configs namespaced; all 13
+doc blocks `snoco_`-prefixed, which matters because doc block names are global).
