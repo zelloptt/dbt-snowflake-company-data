@@ -76,13 +76,61 @@ Initial release. Not yet published to the dbt Package Hub.
   A Package Hub install untars GitHub's source tarball for the tag straight into
   your `dbt_packages/`, and those tarballs honour `export-ignore`, so
   `integration_tests/`, `.github/`, `docs/` and our contributor documentation
-  never land in your project. 36 files ship out of 55 tracked.
+  never land in your project. 38 files ship out of 77 tracked.
 - `README.md` links to `DECISIONLOG.md` and `CONTRIBUTING.md` absolutely, so
   those links resolve when the README is read from inside `dbt_packages/`.
 - Removed the empty scaffold directories and their `.gitkeep` files. dbt tolerates
   resource paths that are declared in `dbt_project.yml` but absent from disk.
 - Corrected the spine size in the README. It said "roughly 100,000 companies";
   it is 2.9 million.
+- **`+schema` on every model config is documented as an invariant.** It was
+  already set and already load-bearing, just silently: consumer projects that
+  override `generate_schema_name` commonly branch on `custom_schema_name is
+  none` and fall back to deriving a schema from the node's file name, which
+  turns `stg_snoco__company_index.sql` into a schema name. Setting `+schema`
+  means that branch is never reached. Now stated at the config block, in the
+  README for consumers who override the macro, and in `DECISIONLOG.md`.
+- **The replica install is documented as a first-class shape** rather than a
+  four-line aside: why the share's secure views cost you a size signal, a
+  freshness anchor and control over when the data moves; the `CREATE TABLE ...
+  AS SELECT` pattern with a `cloned_at` column; row-count guards; and why the
+  replica should stay in one schema.
+
+- **Four literal type casts now use dbt Core's cross-database macros.**
+  `cast(null as boolean)` and `cast(... as float)` became
+  `{{ dbt.type_boolean() }}` and `{{ dbt.type_float() }}` in `snoco__companies`
+  and `snoco__company_match_candidates`. Both macros exist at the `>=1.10.8`
+  floor and both render byte-identically on Snowflake, so this is convention
+  rather than behaviour. `cast(... as date)` in staging stays literal because
+  dbt Core has no `type_date`.
+
+## Documentation
+
+- **The package is audited against hubcap's package best practices**, with the
+  result table in `RELEASE.md` beside the submission runbook. Two items are open
+  and neither is a code change: hubcap wants a package to have run in the
+  author's own production environment before submission, and it recommends
+  production-ready packages be at 1.0.0 or above. One SHOULD is deliberately
+  deviated from, with the reasoning recorded: cross-database *function* macros
+  are not adopted in a package that is Snowflake-only by necessity.
+- **Corrected ground rule 2 in `CLAUDE.md`.** It claimed hubcap makes "never
+  hard-code a database or schema name" a MUST. hubcap's MUST is narrower and
+  concerns table references; database and schema are a SHOULD NOT *assume*,
+  which an overridable var satisfies with or without a default. Read literally,
+  the old wording argued for deleting the `MARKETPLACE_CYBERSYN` and
+  `PUBLIC_DATA_FREE` defaults and re-breaking the zero-config install.
+- **Install instructions now use the git form.** The README pinned
+  `zelloptt/snowflake_company_data` with a version range, which is Package Hub
+  syntax and resolves against `hub.getdbt.com`. The package is not listed there
+  yet, so the snippet failed on the listing rather than on the version and no
+  git tag repairs it. The README leads with a `git:` + `revision:` install,
+  keeps the hub block as the form to switch to once listed, and is explicit that
+  a clone ignores `export-ignore` and therefore delivers more than the package.
+- `RELEASE.md` described an auto-release workflow that does not exist. The
+  release process is manual, and the runbook now says so and gives the actual
+  tag and `gh release` commands. It also leads with the point the first build
+  attempt tripped over: the tag *is* the release, and a version with no tag
+  cannot be installed.
 
 <!--
 FORMAT NOTES (delete this block before the first published release)

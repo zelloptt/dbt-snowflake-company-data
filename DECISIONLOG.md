@@ -418,3 +418,168 @@ Fivetran's staging pattern emits `cast(null as <type>) as <column>` when an expe
 It does not make sense here. Every consumer of this package reads the *same* share, so a provider schema change breaks everyone identically and simultaneously. We want to find out on the next run, not discover it months later as an all-null column that quietly corrupted a mart.
 
 **Revisit if:** the package ever reads a source with genuine per-consumer schema variance.
+
+---
+
+## Every resource carries a `+schema`, and that is load-bearing
+
+`dbt_project.yml` sets `+schema` at the package root and again on `staging/`.
+The root key looks redundant, because `<target_schema>_snowflake_company_data`
+is close to what a consumer would get anyway. It is not redundant, and the
+reason is invisible from inside this repo.
+
+dbt passes the configured schema to `generate_schema_name` as
+`custom_schema_name`. Plenty of real projects override that macro, and a common
+override shape branches on `custom_schema_name is none` and falls back to
+deriving a schema from the node's path or file name. That is correct for the
+project's own models and nonsense for a package's: the node is
+`models/staging/stg_snoco__company_index.sql`, so the fallback returns the
+staging model's own file name as a schema name.
+
+Observed, not theorised. An install into a project whose `generate_schema_name`
+infers schemas from folder structure would have produced a schema derived from
+`stg_snoco__company_index.sql`. It did not, because `+schema` was set and the
+override took its normal branch.
+
+So the invariant is: **every resource this package publishes must resolve to a
+non-null custom schema name.** The root key satisfies it for everything today,
+since configs inherit down the path. A new subdirectory is fine. A new resource
+type declared outside `models:`, seeds most likely, is not, and would need its
+own key.
+
+Measured rather than asserted. Parsing `integration_tests/` on dbt-core 1.12.0
+and reading `config.schema` off every node in the manifest whose `package_name`
+is `snowflake_company_data`:
+
+```
+package nodes: 85
+  resource_type=model  custom_schema_name='snowflake_company_data'
+  resource_type=model  custom_schema_name='stg_snowflake_company_data'
+  resource_type=test   custom_schema_name='dbt_test__audit'
+nodes with NULL custom schema name: 0
+```
+
+Note the tests are covered by dbt-core's own default rather than by anything
+here, so the two model values are the ones this repo is responsible for. Re-run
+that check after adding a resource type.
+
+The staging `+schema` is a different thing and is only a preference: it keeps
+nine views out of the mart schema.
+
+Documented in three places on purpose, because the failure mode is silent and
+appears only in someone else's project: a comment at the config block where
+someone would delete it, a note in the README for the consumer who overrides the
+macro, and a trap entry in CLAUDE.md for whoever edits this next.
+
+**Revisit if:** never, really. The cost is two lines and the failure it prevents
+is one nobody would debug quickly.
+
+---
+
+## The replica install is documented as a first-class shape
+
+The README used to mention reading a replica in a four-line aside under a
+configuration table. It is now a section with the rationale, the SQL, and the
+guard advice.
+
+Reading the share directly is the shape that gets someone started. Reading a
+copy is the shape they end up at, and it is the only reason `snoco_schema` is a
+variable rather than a constant, so burying it undersold both the option and the
+configuration surface built for it.
+
+Three concrete things the share cannot give: `ROW_COUNT` and `BYTES` are `NULL`
+on every secure view, so no size signal; no object carries a load timestamp, so
+no freshness anchor; and the provider republishes on their own schedule, so a
+long build can read two versions of the spine.
+
+The section says `CREATE TABLE ... AS SELECT` rather than `CLONE`, because
+Snowflake does not support cloning out of a listing-derived database and these
+are views regardless. It says to add `cloned_at` in the copy, which is what makes
+the source freshness block in the next section usable rather than hypothetical.
+It says to guard the copy on a row count, because `CREATE OR REPLACE` on a
+truncated pull silently replaces good data. And it says to keep the replica in
+one schema, preserving the two-var isomorphism with the share, while noting the
+per-object relation vars for anyone who cannot.
+
+No replication script ships. It would be one warehouse's opinion about
+scheduling, roles and guard thresholds, and every consumer's answer differs.
+
+**Revisit if:** enough people build the same replication procedure that shipping
+a macro to generate it beats describing it.
+
+---
+
+## The README documents the git install, not the hub install, until listed
+
+The README told consumers to pin `zelloptt/snowflake_company_data` with a
+version range. That is dbt Package Hub syntax, and it resolves against
+`hub.getdbt.com`. Checked, both ends: `hub.getdbt.com/api/v1/zelloptt/
+snowflake_company_data.json` returns 404, and `zelloptt` does not appear in
+hubcap's `hub.json`. The snippet fails for everyone who copies it, with a
+package-not-found error rather than a version error.
+
+Worth being precise about, because the obvious diagnosis is wrong. The missing
+release tag is a real defect and is fixed separately, but a tag does not repair
+this snippet. Hub resolution needs a hub listing. The tag repairs a *git*
+install, which is a different block of YAML.
+
+So the README now leads with the git install and keeps the hub block as the
+form to switch to once listed. The git install is honestly worse: a clone
+ignores `export-ignore`, so the consumer receives `integration_tests/`,
+`.github/` and our contributor docs along with the 38 files that are the
+package. Nothing is parsed, since dbt reads only the declared paths, so it is
+disk rather than behaviour. Said plainly in the README instead of hidden,
+because the alternative right now is an install that does not work at all.
+
+**Revisit when:** the hubcap PR lands and the listing exists. At that point the
+two blocks swap places and the git install becomes the footnote.
+
+---
+
+## Audited against hubcap's package best practices
+
+Every requirement in
+[`package-best-practices.md`](https://github.com/dbt-labs/hubcap/blob/main/package-best-practices.md)
+was checked against the repo rather than against memory of it. The result table
+lives in `RELEASE.md`, next to the submission runbook where it will actually be
+re-read. Recorded here is what changed and what was decided.
+
+**One real gap, fixed.** Four casts used literal `boolean` and `float` where dbt
+Core has `type_boolean()` and `type_float()`. Both exist at the `>=1.10.8` floor,
+confirmed by listing the type macros in dbt-core 1.10.8 itself, and both render
+byte-identically on Snowflake (`SnowflakeColumn.translate_type` returns `float`
+and `boolean` unchanged), so the change is convention with no behavioural risk.
+The three `cast(... as date)` casts in staging stay literal: dbt Core has no
+`type_date`.
+
+**One rule in `CLAUDE.md` was wrong and is corrected.** Ground rule 2 said
+"never hard-code a database or schema name, hubcap makes this a MUST". hubcap's
+MUST is narrower and is about *table references*: use `ref` or `source`. For
+database and schema it says only SHOULD NOT *assume*, which an overridable var
+satisfies whether or not it carries a default.
+
+The distinction is not academic. Read the old wording literally and you would
+delete the `MARKETPLACE_CYBERSYN` and `PUBLIC_DATA_FREE` defaults to comply with
+a MUST that does not exist, undoing `af28dee` and returning the package to
+requiring configuration before it works at all.
+
+**One deliberate deviation from a SHOULD.** hubcap recommends dbt Core's
+cross-database macros. Type macros are used everywhere they apply. Function
+macros, `dbt.concat()`, `dbt.length()`, `dbt.split_part()`, are not: this package
+is Snowflake-only because its data source is a Snowflake Marketplace share, so a
+portable wrapper around a function that will only ever compile for one adapter
+is indirection with nothing behind it. That is ground rule 9, and RFC 2119 SHOULD
+allows a deviation that has been weighed. Written down so the next reviewer sees
+a decision rather than an oversight.
+
+**One open question, not ours to settle here.** hubcap notes that
+production-ready packages should be at 1.0.0 or above. This package is 0.1.0 and
+says so. Both are honest and they conflict only at submission, so `RELEASE.md`
+states the choice rather than pretending it does not exist.
+
+Everything else already passed, including the two MUSTs most likely to fail
+silently: no hard-coded table reference anywhere (every `from` and `join` target
+is a CTE, a `ref()`, or a var defaulting to `source()`), and nothing that
+overrides dbt Core behaviour for resources this package did not create (five
+distinctly named macros, none a dbt hook; vars and configs namespaced; all 13
+doc blocks `snoco_`-prefixed, which matters because doc block names are global).

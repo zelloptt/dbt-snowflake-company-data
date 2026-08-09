@@ -146,6 +146,28 @@ vars:
 # connectors. We do neither: there is one share, every consumer reads the same
 # objects, and CLAUDE.md ground rule 7 rejects the schema-drift shim outright.
 # A tmp layer here would be indirection with nothing on the other end.
+#
+# ---------------------------------------------------------------------------
+# INVARIANT: every resource this package publishes must resolve to a non-null
+# custom schema name. Do not remove a +schema key. Change its value if you
+# like; adding a new subdirectory or resource type without one is the bug.
+#
+# The reason is invisible from inside this repo, which is why it is written
+# down. dbt hands the custom schema name to generate_schema_name, and a large
+# share of real projects override that macro. The common override shape
+# branches on `custom_schema_name is none` and falls back to deriving a schema
+# from the node's path or file name, which is right for the project's own
+# models and nonsense for a package's: a staging model's file name comes back
+# as the schema. Supplying +schema means the fallback branch is never reached
+# in anyone's project.
+#
+# This has already been observed once, in a consumer project whose
+# generate_schema_name infers schemas from folder structure. The package
+# survived the install only because +schema was set.
+#
+# Note the root key alone satisfies the invariant, since configs inherit down
+# the path. The staging key exists for the separate reason below.
+# ---------------------------------------------------------------------------
 models:
   snowflake_company_data:
     +materialized: table
@@ -156,6 +178,9 @@ models:
       # source that is already materialised, so a table would be a second copy
       # of 16M rows earning nothing.
       +materialized: view
+
+      # Splits staging into its own schema so the nine views do not sit beside
+      # the marts. This one is a preference; the root +schema above is not.
       +schema: stg_snowflake_company_data
     intermediate:
       +materialized: ephemeral

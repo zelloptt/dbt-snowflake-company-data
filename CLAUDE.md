@@ -28,7 +28,7 @@ The `snoco` infix is not optional. hubcap's package best practices require disam
 ## Ground rules
 
 1. **The source database is read-only.** Snowflake forbids creating objects in a database created from a listing. Everything materializes into the user's own database. Never target `store_failures` or a snapshot at the share.
-2. **Never hard-code a database or schema name.** hubcap makes this a MUST. Everything goes through vars.
+2. **Never hard-code a relation.** Every table reference goes through `ref()`, `source()`, or a relation var that defaults to one. hubcap makes *this* the MUST ("Packages MUST NOT hard-code table references, and MUST use `ref` or `source` instead"). Database and schema names are a weaker rule there, SHOULD NOT *assume*, satisfied by making them overridable rather than by having no default. So `snoco_database` defaulting to `MARKETPLACE_CYBERSYN` and `snoco_schema` to `PUBLIC_DATA_FREE` is compliant and deliberate: they are the names the listing itself proposes, and an unconfigured install works. Do not remove those defaults believing hubcap forbids them; it does not, and removing them re-breaks the zero-config install that `af28dee` fixed.
 3. **Verify column names against the live share before using them.** Public documentation for this dataset is thin and partly wrong. `DISCOVERY.md` is the source of truth. If a column you expected is absent, change the model; do not invent the column.
 4. **`require-dbt-version` keeps the `<3.0.0` ceiling.** Fusion is 2.x. Narrowing this costs the hub badge.
 5. **Generic test arguments nest under `arguments:`.** Required since dbt 1.10.8.
@@ -46,6 +46,7 @@ The `snoco` infix is not optional. hubcap's package best practices require disam
 - **`LAST_ALTERED` is not a freshness signal.** Snowflake documents it as reflecting DDL and background metadata operations. Source freshness ships off by default.
 - **Do not `USE SCHEMA INFORMATION_SCHEMA` on a share-derived database.** Snowflake documents that it can fail. Fully qualified references work fine.
 - **`ROW_COUNT` and `BYTES` are often null for share-derived objects**, since Marketplace listings commonly expose secure views. Use real `count(*)`.
+- **Never remove a `+schema` key from `dbt_project.yml`.** Every resource this package publishes must resolve to a non-null custom schema name. Many consumer projects override `generate_schema_name` and branch on `custom_schema_name is none`, falling back to deriving a schema from the node's path or file name, which turns `stg_snoco__company_index.sql` into a schema name. Setting `+schema` means that branch is never reached. The root key covers everything under `models:` by inheritance; a new resource type declared outside it needs its own. Change values freely, delete nothing.
 
 ## Working style
 
