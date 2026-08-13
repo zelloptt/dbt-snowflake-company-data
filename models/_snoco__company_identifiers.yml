@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: snoco__company_identifiers
+    description: >
+      Each record represents one external identifier held by one company. Long
+      rather than wide so a consumer can join on whichever identifier system
+      they hold, and because a company can carry several LEIs.
+    columns:
+      - name: identifier_sk
+        description: >
+          Surrogate key over (company_id, identifier_type, identifier_value).
+          A surrogate rather than a multi-column uniqueness test because
+          dbt-core 1.10.6 broke the multi-argument test syntax that
+          dbt_utils.unique_combination_of_columns depends on.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        description: Foreign key to snoco__companies.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('snoco__companies')
+                field: company_id
+      - name: identifier_type
+        description: The identifier system.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['ein', 'cik', 'lei', 'permid_company_id', 'ticker']
+      - name: identifier_value
+        description: The identifier itself.
+        data_tests:
+          - not_null

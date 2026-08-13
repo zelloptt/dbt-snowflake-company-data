@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: stg_snoco__geographies
+    description: >
+      Each record represents one geographic entity, from country down to census
+      block group, with ISO codes. 573,277 rows.
+    columns:
+      - name: geo_id
+        data_tests:
+          - unique
+          - not_null
+      - name: geo_level
+        description: Granularity of the entity, e.g. Country, State, Zip.
+      - name: iso_alpha2
+        description: ISO 3166-1 alpha-2, populated at country level.
+      - name: iso_3166_2_code
+        description: ISO 3166-2 subdivision code, populated at state level.

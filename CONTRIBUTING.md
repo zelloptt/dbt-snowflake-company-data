@@ -48,13 +48,16 @@ without changing a line of package code:
 vars:
   snowflake_company_data:
     snoco_company_index: "{{ ref('input_company_index') }}"
-    snoco_sec_cik_index: "{{ ref('snoco_seed_sec_cik_index') }}"
+    snoco_sec_cik_index: "{{ ref('input_sec_cik_index') }}"
     # ...and so on
 ```
 
-Six point straight at a seed. Three go through a thin `input_*` model first,
-because their real columns are ARRAY-typed and a CSV cannot express an ARRAY;
-those models split a delimited string into one.
+Five point straight at a seed. Four go through a thin `input_*` model first.
+Three of those exist because their real columns are ARRAY-typed and a CSV
+cannot express an ARRAY. `input_sec_cik_index` exists because the same CSV
+has to hold both a NULL `company_id` (orphan filers) and a literal empty
+string in `country`/`state` (trap 8), which one `empty_as_null` setting
+cannot express.
 
 ### The fixtures are adversarial on purpose
 
@@ -71,6 +74,9 @@ fixture and a test fails, read the assertion before you change the expectation:
 | Two `sec_cik_index` rows with no `company_id` | 28.7% of the real object; must survive staging |
 | `BBG000UNKNOWN` | referenced but undescribed security must be `is_resolved = false` |
 | `shared-registrar.com` on two companies | shared domains must be flagged, not dropped |
+| `C1` SEC country `X1`, EAV country `US` | EDGAR wins; ISO comes from geography, not from the leaked EAV value |
+| `C5` SEC country and state `''` | empty strings must fall through to EAV, not mask it |
+| `C8` SEC country `xx` | XX placeholder must become NULL; geography still resolves |
 
 ## Standards
 
@@ -82,6 +88,10 @@ fixture and a test fails, read the assertion before you change the expectation:
 
 **Every model needs:**
 
+- A schema YAML file next to it, same name, prefixed with an underscore
+  (`snoco__companies.sql` → `_snoco__companies.yml`). Do not bundle several
+  models into one `_models.yml`; those files grow until the description you
+  want is unfindable.
 - A description starting "Each record represents..."
 - Column-level descriptions, using doc blocks in `models/docs.md` for anything appearing in more than two models
 - Tests on its grain: `not_null` on keys, `unique` on the primary key or a surrogate key where the grain is composite

@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: snoco__company_domains
+    description: >
+      Each record represents one web domain owned by one company. The most
+      useful join key in the package for CRM work, and many-to-many in both
+      directions.
+    columns:
+      - name: company_domain_sk
+        description: Surrogate key over (company_id, domain).
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('snoco__companies')
+                field: company_id
+      - name: domain
+        description: "{{ doc('snoco_domain') }}"
+        data_tests:
+          - not_null
+      - name: companies_sharing_domain
+        description: How many companies the share attributes this domain to.
+      - name: is_shared_domain
+        description: >
+          True when more than one company claims this domain. These are the rows
+          that will fan out a naive join, so they are flagged rather than removed.

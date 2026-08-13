@@ -11,6 +11,11 @@
 -- The industry column is `sic`. There is no `sic_code` column on this object;
 -- `sic_code` is an attribute_name in company_characteristics, which is a
 -- different thing carrying different coverage.
+--
+-- `country` and `state` are EDGAR state-or-country codes, not ISO, and they
+-- carry empty strings. Staging passes them through; snoco__companies turns
+-- blanks and XX into NULL and resolves ISO via the *_geo_id columns. See
+-- docs/DISCOVERY.md trap 8.
 
 select
     cast(cik                    as {{ dbt.type_string() }}) as cik,

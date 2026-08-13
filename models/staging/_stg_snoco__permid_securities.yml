@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: stg_snoco__permid_securities
+    description: Each record represents one PermID security reference. 25,751 rows.
+    columns:
+      - name: permid_security_id
+        data_tests:
+          - unique
+          - not_null

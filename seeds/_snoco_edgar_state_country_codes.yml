@@ -1,0 +1,37 @@
+version: 2
+
+seeds:
+  - name: snoco_edgar_state_country_codes
+    description: >
+      Each record represents one code in the SEC's EDGAR state-or-country list.
+      US government classification, not share data. Current codes (post-February
+      2010) from
+      https://www.sec.gov/submit-filings/filer-support-resources/edgar-state-country-codes
+
+      This is how `edgar_country_code` / `edgar_state_code` on snoco__companies
+      become readable. It is not an ISO map: country_iso_alpha2 still comes
+      from geography_index.
+    config:
+      column_types:
+        edgar_code: varchar
+        edgar_name: varchar
+        geography_kind: varchar
+    columns:
+      - name: edgar_code
+        description: Two-character EDGAR code, e.g. X1, E9, TX, A8.
+        data_tests:
+          - unique
+          - not_null
+      - name: edgar_name
+        description: English name from the SEC list.
+        data_tests:
+          - not_null
+      - name: geography_kind
+        description: >
+          us_state (including DC), ca_province, country (including X1 and Z4),
+          or unknown (XX).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['us_state', 'ca_province', 'country', 'unknown']

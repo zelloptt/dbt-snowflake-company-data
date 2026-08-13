@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: stg_snoco__openfigi_securities
+    description: >
+      Each record represents one OpenFIGI security reference. 119,273 rows.
+      Identifier columns are ARRAYs and are flattened downstream.
+    columns:
+      - name: openfigi_id
+        data_tests:
+          - unique
+          - not_null

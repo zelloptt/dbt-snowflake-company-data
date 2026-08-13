@@ -10,7 +10,7 @@ The package is pre-1.0. While on 0.x:
 | New models, new columns, new variables | minor |
 | Bug fix with no interface change | patch |
 
-This is the standard 0.x semver convention and it is why the README tells consumers to pin `[">=0.1.0", "<0.2.0"]`. If you change the pin guidance, change this table to match, or you will break people.
+This is the standard 0.x semver convention and it is why the README tells consumers to pin `[">=0.2.0", "<0.3.0"]`. If you change the pin guidance, change this table to match, or you will break people.
 
 At 1.0.0 this switches to conventional semver: breaking changes become major bumps.
 

@@ -32,7 +32,11 @@ with ranked as (
         ) as value_rank
 
     from {{ ref('stg_snoco__company_characteristics') }}
+    -- Empty strings are not NULLs. Domains and identifiers already drop them;
+    -- leaving them here lets a blank address win the rank and then survive
+    -- coalesce() downstream. See docs/DISCOVERY.md trap 8.
     where attribute_value is not null
+      and attribute_value != ''
 
 ),
 

@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: stg_snoco__company_characteristics
+    description: >
+      Each record represents one attribute value for one company. Entity-
+      attribute-value, 11.7M rows across 15 attribute names. Not unique on
+      (company_id, attribute_name); pivot via int_snoco__company_attributes,
+      which deduplicates deterministically.
+    columns:
+      - name: company_id
+        description: "{{ doc('snoco_company_id') }}"
+        data_tests:
+          - not_null
+      - name: attribute_name
+        description: One of 15 attribute names. See docs/DISCOVERY.md.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - company_name
+                  - company_legal_structure
+                  - permid_company_id
+                  - cik
+                  - ein
+                  - lei
+                  - sic_code
+                  - sic_description
+                  - sec_industry_group
+                  - business_address_line1
+                  - business_address_line2
+                  - business_address_city
+                  - business_address_state
+                  - business_address_zip
+                  - business_address_country
+      - name: attribute_value
+        description: The attribute value. Always text, whatever the attribute.
+      - name: observed_from_date
+        description: "{{ doc('snoco_observed_from_date') }}"

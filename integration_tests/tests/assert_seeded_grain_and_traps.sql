@@ -74,6 +74,53 @@ with expectations as (
     select 'country resolves to an ISO code via geography', 1,
            (select count(*) from {{ ref('snoco__companies') }}
             where company_id = 'C1' and country_iso_alpha2 = 'US')
+    union all
+    -- C1's SEC country is the EDGAR code X1; EAV leaks ISO US. SEC must win,
+    -- and state must resolve through geography rather than the raw code.
+    select 'sec edgar country wins over eav iso leak', 1,
+           (select count(*) from {{ ref('snoco__companies') }}
+            where company_id = 'C1'
+              and edgar_country_code = 'X1'
+              and edgar_country_name = 'United States'
+              and edgar_state_code = 'TX'
+              and edgar_state_name = 'Texas'
+              and country_iso_alpha3 = 'USA'
+              and country_name = 'United States'
+              and state_iso_3166_2 = 'US-TX'
+              and state_name = 'Texas')
+    union all
+    -- C5's SEC country and state are empty strings. coalesce used to prefer
+    -- those blanks over the EAV values X1 / NY.
+    select 'empty sec country falls through to eav', 1,
+           (select count(*) from {{ ref('snoco__companies') }}
+            where company_id = 'C5'
+              and edgar_country_code = 'X1'
+              and edgar_state_code = 'NY'
+              and country_iso_alpha2 = 'US'
+              and state_iso_3166_2 = 'US-NY')
+    union all
+    -- C8's SEC country is xx, the EDGAR unknown placeholder, and there is no
+    -- EAV country. The code must be NULL; geography still resolves.
+    select 'xx placeholder is nulled but geography still resolves', 1,
+           (select count(*) from {{ ref('snoco__companies') }}
+            where company_id = 'C8'
+              and edgar_country_code is null
+              and edgar_country_name is null
+              and country_iso_alpha2 = 'US'
+              and state_iso_3166_2 = 'US-CO')
+    union all
+    -- C2 is not an SEC filer. EAV-only EDGAR X0 (United Kingdom) is kept, and
+    -- there is no geo_id so there is no ISO code to invent.
+    select 'eav-only edgar country is kept without an iso code', 1,
+           (select count(*) from {{ ref('snoco__companies') }}
+            where company_id = 'C2'
+              and edgar_country_code = 'X0'
+              and edgar_country_name = 'United Kingdom'
+              and country_iso_alpha2 is null)
+    union all
+    select 'no empty-string country or state codes', 0,
+           (select count(*) from {{ ref('snoco__companies') }}
+            where edgar_country_code = '' or edgar_state_code = '')
 
 )
 

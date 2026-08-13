@@ -18,6 +18,7 @@ An open-source dbt package published to the dbt Package Hub as `zelloptt/snowfla
 | Staging model | `stg_snoco__<source_table>` | `stg_snoco__company_index` |
 | Intermediate model | `int_snoco__<description>` | `int_snoco__company_edges` |
 | Mart model | `snoco__<entity>` | `snoco__companies` |
+| Schema YAML | `_<model_name>.yml` next to the SQL | `_snoco__companies.yml` |
 | Location and enablement vars | `snoco_<thing>` (single underscore) | `snoco_database`, `snoco_company_enabled` |
 | User config vars | `snoco__<thing>` (double underscore) | `snoco__match_min_score` |
 | Public macro | bare verb-noun, filename equals macro name | `normalize_company_name.sql` |
@@ -34,7 +35,7 @@ The `snoco` infix is not optional. hubcap's package best practices require disam
 5. **Generic test arguments nest under `arguments:`.** Required since dbt 1.10.8.
 6. **No `dbt_utils.unique_combination_of_columns`.** dbt-core 1.10.6 broke multi-argument test syntax. For composite grain, build a surrogate key column and test `unique` on it.
 7. **Prefer loud failures to silent nulls.** Do not adopt Fivetran's `fill_staging_columns` pattern. Every consumer reads the same share, so a schema change breaks everyone identically and we want to know immediately.
-8. **No data in the repo.** Any seed derived from the share is redistribution and Apache 2.0 does not cover it. Integration fixtures must be synthetic. A SIC reference seed is fine because SIC is a US government classification.
+8. **No share data in the repo.** A seed copied from the Snowflake share is redistribution, and Apache 2.0 does not license that data. Integration fixtures must be synthetic. Government classification tables are the exception, not a loophole: SIC and the SEC EDGAR state-or-country list are US government standards. They are how the package makes the share readable, and they ship.
 9. **Snowflake only.** No `adapter.dispatch` scaffolding. Do use `dbt.type_string()` and friends instead of literal types; it costs nothing.
 10. **Views in staging, tables only where real work happens.** dbt's package guidance defaults to views and the spine is only ~100K rows.
 
@@ -47,6 +48,7 @@ The `snoco` infix is not optional. hubcap's package best practices require disam
 - **Do not `USE SCHEMA INFORMATION_SCHEMA` on a share-derived database.** Snowflake documents that it can fail. Fully qualified references work fine.
 - **`ROW_COUNT` and `BYTES` are often null for share-derived objects**, since Marketplace listings commonly expose secure views. Use real `count(*)`.
 - **Never remove a `+schema` key from `dbt_project.yml`.** Every resource this package publishes must resolve to a non-null custom schema name. Many consumer projects override `generate_schema_name` and branch on `custom_schema_name is none`, falling back to deriving a schema from the node's path or file name, which turns `stg_snoco__company_index.sql` into a schema name. Setting `+schema` means that branch is never reached. The root key covers everything under `models:` by inheritance; a new resource type declared outside it needs its own. Change values freely, delete nothing.
+- **`COUNTRY` and `STATE` are EDGAR state-or-country codes, not ISO.** `X1` is the United States, `E9` Cayman, `Z4` Canada, `XX` unknown. 12,048 country values are `''` rather than NULL, so `WHERE country IS NOT NULL` returns junk and `coalesce(sec, eav)` prefers the blank. Filter on `country_iso_alpha2` / `state_iso_3166_2`. See `docs/DISCOVERY.md` trap 8.
 
 ## Working style
 

@@ -1,3 +1,58 @@
+# snowflake_company_data v0.2.0
+
+## Schema/Data Change (--full-refresh required after upgrading)
+
+**0 new models • 1 new seed • 2 possible breaking changes**
+
+| Model | Change type | Old | New | Notes |
+| ----- | ----------- | --- | --- | ----- |
+| `snoco__companies` | Breaking column rename | `country` | `edgar_country_code` | EDGAR state-or-country code, not ISO. Empty strings and `XX` are NULL. |
+| `snoco__companies` | Breaking column rename | `state` | `edgar_state_code` | Mixed USPS / EDGAR. Empty strings are NULL. |
+| `snoco__companies` | New column | | `country_name` | From `geography_index`. |
+| `snoco__companies` | New column | | `state_iso_3166_2` | From `state_geo_id` → `geography_index`. |
+| `snoco__companies` | New column | | `state_name` | From `geography_index`. |
+| `snoco__companies` | New column | | `state_geo_id` | Was staged and dropped. |
+| `snoco__companies` | New column | | `edgar_country_name` | From the shipped SEC EDGAR list. |
+| `snoco__companies` | New column | | `edgar_state_name` | From the shipped SEC EDGAR list. |
+| `snoco_edgar_state_country_codes` | New seed | | | SEC EDGAR state-or-country list. Government classification, not share data. |
+
+Filter on `country_iso_alpha2` and `state_iso_3166_2`. `where country is not
+null` against the old column returned 12,048 empty strings and 1,034 `XX`
+placeholders. See `DECISIONLOG.md` and `docs/DISCOVERY.md` trap 8.
+
+## Breaking Changes
+
+- **`snoco__companies.country` and `.state` are gone.** They were EDGAR
+  state-or-country codes (`X1` = United States) with empty strings, `XX`
+  placeholders, and a mixed ISO/USPS leak, published under names that read as
+  ISO. Use `country_iso_alpha2` / `state_iso_3166_2`. The source codes remain
+  as `edgar_country_code` / `edgar_state_code`.
+
+## Features
+
+- **EDGAR codes are named.** `snoco_edgar_state_country_codes` ships the SEC's
+  state-or-country list (309 codes). `snoco__companies` joins it to produce
+  `edgar_country_name` / `edgar_state_name`, so `X1` reads as United States
+  without leaving the warehouse.
+
+## Bug Fixes
+
+- **Empty-string country and state no longer mask a real value.** `coalesce`
+  treated `''` as present, so a blank SEC country hid the attribute-table
+  value, and `where country is not null` returned junk. Blanks and `XX` are
+  now NULL on each source before coalesce, matching the `!= ''` filter domains
+  and identifiers already applied.
+
+## Under the Hood
+
+- `int_snoco__company_attributes` drops empty-string attribute values the same
+  way identifiers do, so a blank address cannot win the EAV rank.
+- Seeds now carry `+schema`, the same invariant models already had. A new
+  resource type outside `models:` does not inherit that key.
+- Schema YAML is one file per model, same name, prefixed with an underscore
+  (`_snoco__companies.yml` next to `snoco__companies.sql`). Bundled
+  `_models.yml` files are gone.
+
 # snowflake_company_data v0.1.0
 
 Initial release. Not yet published to the dbt Package Hub.

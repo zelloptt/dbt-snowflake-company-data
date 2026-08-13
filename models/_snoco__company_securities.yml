@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: snoco__company_securities
+    description: >
+      Each record represents one security issued by one company, with reference
+      data resolved through a flattened identifier lookup rather than an
+      ARRAY_CONTAINS join predicate.
+    columns:
+      - name: company_security_sk
+        description: Surrogate key over (company_id, security_id_type, security_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('snoco__companies')
+                field: company_id
+      - name: security_id_type
+        data_tests:
+          - not_null
+      - name: is_resolved
+        description: >
+          Whether the security_id resolved to a row in the OpenFIGI or PermID
+          reference. False means the share references a security it does not
+          also describe, which is a source gap rather than a modelling error.

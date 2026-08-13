@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: stg_snoco__company_index
+    description: >
+      Each record represents one company on the Snowflake Public Data (Free)
+      spine. Renamed and typed; no other transformation. 2,918,929 rows.
+      entity_level and global_tickers are dropped because both are constant or
+      empty on every row; see docs/DISCOVERY.md.
+    columns:
+      - name: company_id
+        description: "{{ doc('snoco_company_id') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: company_name
+        description: "{{ doc('snoco_company_name') }}"
+      - name: lei_array
+        description: >
+          ARRAY of Legal Entity Identifiers, passed through unflattened. Flatten
+          only via int_snoco__company_identifiers, which guards against the
+          5,287-element arrays a provider bug attaches to ~1,900 companies.
+      - name: ein
+        description: "{{ doc('snoco_ein') }}"
+      - name: cik
+        description: "{{ doc('snoco_cik') }}"
+      - name: permid_company_id
+        description: "{{ doc('snoco_permid_company_id') }}"
+      - name: primary_ticker
+        description: Primary exchange ticker. ~0.7% populated.

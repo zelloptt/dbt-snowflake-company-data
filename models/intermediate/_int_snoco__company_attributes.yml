@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: int_snoco__company_attributes
+    description: >
+      Each record represents one company with its entity-attribute-value
+      attributes pivoted to columns. Deduplicated deterministically, because the
+      source is not unique on (company_id, attribute_name) and has no usable
+      close-out date to filter on.
+    columns:
+      - name: company_id
+        data_tests:
+          - unique
+          - not_null
