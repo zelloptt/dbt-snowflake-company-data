@@ -184,15 +184,3 @@ models:
       +schema: stg_snowflake_company_data
     intermediate:
       +materialized: ephemeral
-
-# Seeds are a separate resource type, so they do not inherit +schema from
-# models:. The invariant still applies: a non-null custom schema name, or a
-# consumer's generate_schema_name fallback turns the seed file name into a
-# schema. Same value as the marts, so the lookup sits next to snoco__companies.
-seeds:
-  snowflake_company_data:
-    +schema: snowflake_company_data
-    # Package seeds are disabled by default. This one has to load: companies
-    # joins it, and 309 rows of a government code list is the point of shipping
-    # it rather than making every consumer rebuild it.
-    +enabled: true

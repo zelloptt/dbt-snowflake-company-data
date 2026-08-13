@@ -281,7 +281,7 @@ are populated on 681,787 rows, including rows whose EDGAR code is blank or
 **Consequence:** do not filter on `country` or `state`. The mart exposes the
 EDGAR values as `edgar_country_code` / `edgar_state_code` after turning empty
 strings and `XX` into NULL, names them from the shipped SEC list
-(`snoco_edgar_state_country_codes` → `edgar_country_name` /
+(`snoco__edgar_state_country_codes` → `edgar_country_name` /
 `edgar_state_name`), and uses the ISO columns as the ones to filter on. No
 EDGAR → ISO mapping is maintained in the package; the geography index already
 is that mapping.

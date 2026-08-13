@@ -24,7 +24,7 @@
 -- and not one vocabulary. Filter on country_iso_alpha2 / state_iso_3166_2,
 -- which resolve through geography_index. The EDGAR values are kept as
 -- edgar_country_code / edgar_state_code and named from the SEC list shipped
--- as snoco_edgar_state_country_codes. See docs/DISCOVERY.md trap 8.
+-- as snoco__edgar_state_country_codes. See docs/DISCOVERY.md trap 8.
 
 with spine as (
 
@@ -195,7 +195,7 @@ select
     edgar_states.edgar_name    as edgar_state_name,
     {{ snowflake_company_data.normalize_company_name('company_name') }} as company_name_normalized
 from joined
-left join {{ ref('snoco_edgar_state_country_codes') }} as edgar_countries
+left join {{ ref('snoco__edgar_state_country_codes') }} as edgar_countries
     on upper(joined.edgar_country_code) = edgar_countries.edgar_code
-left join {{ ref('snoco_edgar_state_country_codes') }} as edgar_states
+left join {{ ref('snoco__edgar_state_country_codes') }} as edgar_states
     on upper(joined.edgar_state_code) = edgar_states.edgar_code

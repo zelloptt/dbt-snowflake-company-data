@@ -34,8 +34,8 @@ This package absorbs that complexity once so you do not have to solve it in ever
 | `snoco__company_match` | one row per matched record of yours | opt-in |
 
 Nine staging models sit underneath, one per source object, renamed and typed and
-nothing else. One seed ships with the package: `snoco_edgar_state_country_codes`,
-the SEC's EDGAR state-or-country list, so `X1` has a name. Three public macros
+nothing else. `snoco__edgar_state_country_codes` ships the SEC's EDGAR
+state-or-country list, so `X1` has a name. Three public macros
 are usable on their own: `normalize_company_name`, `normalize_domain` and
 `company_name_similarity`.
 (The blocking key is `_blocking_key`, which is private: the leading underscore

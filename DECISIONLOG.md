@@ -615,10 +615,12 @@ So the mart now:
 - Drops `country` and `state` as column names, because keeping them would
   invite `where country = 'US'` against a column whose United States is `X1`.
 - Names the EDGAR codes from a shipped copy of the SEC list
-  (`snoco_edgar_state_country_codes` → `edgar_country_name` /
+  (`snoco__edgar_state_country_codes` → `edgar_country_name` /
   `edgar_state_name`). Ground rule 8 forbids copying the *share* into git. It
   does not forbid a US government classification table; that is the same
   exception SIC already had, and it is the thing that makes `X1` readable.
+  The list is a model, not a seed: `dbt run` has to materialize it, and it
+  disables with `snoco_company_enabled` the same way the company marts do.
 
 Considered and rejected: shipping an EDGAR → ISO seed. The geography index
 already is that mapping, it is what the share gives us, and inventing one
@@ -627,5 +629,5 @@ name lookup is a different job and is the one the SEC list actually does.
 
 **Revisit if:** the provider starts writing ISO in `COUNTRY`, at which point
 `edgar_country_code` becomes a misnomer and the ISO join is the thing to
-re-check. Or if the SEC republishes the list, at which point the seed needs
+re-check. Or if the SEC republishes the list, at which point the model needs
 a refresh from the same URL.

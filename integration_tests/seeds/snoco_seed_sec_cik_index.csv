@@ -1,6 +1,6 @@
 cik,company_id,company_name,ein,sic,sic_code_category,sic_code_description,sec_filer_category,incorporation_state,incorporation_country,address_line_1,address_line_2,city,state,zip,country,country_geo_id,state_geo_id,phone_number
 0000000001,C1,AURORA ROBOTICS INC,111111111,3559,Industrial,Special Industry Machinery,Large accelerated filer,DE,US,100 Congress Ave,Suite 400,Austin,TX,78701,X1,GEO_US,GEO_US_TX,512-555-0100
-0000000005,C5,DUNMORE ANALYTICS CORP,555555555,7372,Technology,Prepackaged Software,Accelerated filer,DE,US,55 Water St,,New York,,10041,,GEO_US,GEO_US_NY,212-555-0155
+0000000005,C5,DUNMORE ANALYTICS CORP,555555555,7372,Technology,Prepackaged Software,Accelerated filer,DE,US,55 Water St,,New York,__EMPTY__,10041,__EMPTY__,GEO_US,GEO_US_NY,212-555-0155
 0000000008,C8,EVEREST PROVISIONING CO,888888888,5812,Consumer,Eating Places,Non-accelerated filer,CO,US,9 Alpine Way,,Denver,CO,80202,xx,GEO_US,GEO_US_CO,303-555-0188
 0000009001,,ORPHAN FILER ONE,,6022,Financial,State Commercial Banks,Non-accelerated filer,NY,US,1 Nowhere Plz,,Albany,NY,12207,X1,GEO_US,GEO_US_NY,
 0000009002,,ORPHAN FILER TWO,,6798,Financial,Real Estate Investment Trusts,Non-accelerated filer,MD,US,2 Nowhere Plz,,Baltimore,MD,21201,X1,GEO_US,GEO_US_MD,

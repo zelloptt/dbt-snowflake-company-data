@@ -56,8 +56,9 @@ Five point straight at a seed. Four go through a thin `input_*` model first.
 Three of those exist because their real columns are ARRAY-typed and a CSV
 cannot express an ARRAY. `input_sec_cik_index` exists because the same CSV
 has to hold both a NULL `company_id` (orphan filers) and a literal empty
-string in `country`/`state` (trap 8), which one `empty_as_null` setting
-cannot express.
+string in `country`/`state` (trap 8). Fusion does not accept `empty_as_null`,
+so C5's blanks are the sentinel `__EMPTY__` in the CSV and become `''` in
+that input model.
 
 ### The fixtures are adversarial on purpose
 

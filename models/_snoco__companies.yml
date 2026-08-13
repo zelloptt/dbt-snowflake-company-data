@@ -14,7 +14,7 @@ models:
       Filter country and state on the ISO columns (`country_iso_alpha2`,
       `state_iso_3166_2`). Source country/state are EDGAR state-or-country
       codes, exposed as `edgar_country_code` / `edgar_state_code` and named
-      from the shipped SEC list `snoco_edgar_state_country_codes`. See
+      from the shipped SEC list `snoco__edgar_state_country_codes`. See
       docs/DISCOVERY.md trap 8.
     columns:
       - name: company_id
@@ -84,7 +84,7 @@ models:
       - name: edgar_country_name
         description: >
           English name for edgar_country_code, from the SEC EDGAR list shipped
-          as snoco_edgar_state_country_codes. NULL when the code is not on the
+          as snoco__edgar_state_country_codes. NULL when the code is not on the
           list (the ISO leaks US/FR, for example).
       - name: edgar_state_name
         description: >

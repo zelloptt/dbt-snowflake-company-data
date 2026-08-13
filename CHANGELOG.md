@@ -2,7 +2,7 @@
 
 ## Schema/Data Change (--full-refresh required after upgrading)
 
-**0 new models • 1 new seed • 2 possible breaking changes**
+**1 new model • 2 possible breaking changes**
 
 | Model | Change type | Old | New | Notes |
 | ----- | ----------- | --- | --- | ----- |
@@ -14,7 +14,7 @@
 | `snoco__companies` | New column | | `state_geo_id` | Was staged and dropped. |
 | `snoco__companies` | New column | | `edgar_country_name` | From the shipped SEC EDGAR list. |
 | `snoco__companies` | New column | | `edgar_state_name` | From the shipped SEC EDGAR list. |
-| `snoco_edgar_state_country_codes` | New seed | | | SEC EDGAR state-or-country list. Government classification, not share data. |
+| `snoco__edgar_state_country_codes` | New model | | | SEC EDGAR state-or-country list. Government classification, not share data. A model so `dbt run` materializes it; gated on `snoco_company_enabled`. |
 
 Filter on `country_iso_alpha2` and `state_iso_3166_2`. `where country is not
 null` against the old column returned 12,048 empty strings and 1,034 `XX`
@@ -30,7 +30,7 @@ placeholders. See `DECISIONLOG.md` and `docs/DISCOVERY.md` trap 8.
 
 ## Features
 
-- **EDGAR codes are named.** `snoco_edgar_state_country_codes` ships the SEC's
+- **EDGAR codes are named.** `snoco__edgar_state_country_codes` ships the SEC's
   state-or-country list (309 codes). `snoco__companies` joins it to produce
   `edgar_country_name` / `edgar_state_name`, so `X1` reads as United States
   without leaving the warehouse.
@@ -47,8 +47,8 @@ placeholders. See `DECISIONLOG.md` and `docs/DISCOVERY.md` trap 8.
 
 - `int_snoco__company_attributes` drops empty-string attribute values the same
   way identifiers do, so a blank address cannot win the EAV rank.
-- Seeds now carry `+schema`, the same invariant models already had. A new
-  resource type outside `models:` does not inherit that key.
+- The EDGAR list is a model, not a seed, so `dbt run` materializes it and it
+  disables with `snoco_company_enabled`.
 - Schema YAML is one file per model, same name, prefixed with an underscore
   (`_snoco__companies.yml` next to `snoco__companies.sql`). Bundled
   `_models.yml` files are gone.

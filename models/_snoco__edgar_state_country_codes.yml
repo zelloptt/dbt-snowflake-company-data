@@ -1,7 +1,7 @@
 version: 2
 
-seeds:
-  - name: snoco_edgar_state_country_codes
+models:
+  - name: snoco__edgar_state_country_codes
     description: >
       Each record represents one code in the SEC's EDGAR state-or-country list.
       US government classification, not share data. Current codes (post-February
@@ -10,12 +10,7 @@ seeds:
 
       This is how `edgar_country_code` / `edgar_state_code` on snoco__companies
       become readable. It is not an ISO map: country_iso_alpha2 still comes
-      from geography_index.
-    config:
-      column_types:
-        edgar_code: varchar
-        edgar_name: varchar
-        geography_kind: varchar
+      from geography_index. Shipped as a model so `dbt run` materializes it.
     columns:
       - name: edgar_code
         description: Two-character EDGAR code, e.g. X1, E9, TX, A8.
