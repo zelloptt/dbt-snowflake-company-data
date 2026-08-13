@@ -162,6 +162,20 @@ sources:
             description: Broad SIC category label.
           - name: sic_code_description
             description: SIC code description.
+          - name: country
+            description: >
+              EDGAR state-or-country code, not ISO. X1 is the United States,
+              E9 Cayman, Z4 Canada, XX unknown. Also carries empty strings and
+              a handful of ISO / USPS values. Join country_geo_id instead.
+              See docs/DISCOVERY.md trap 8.
+          - name: state
+            description: >
+              Mixed USPS (TX) and EDGAR (A8 Quebec, E9 Cayman) codes, plus
+              empty strings. Join state_geo_id instead.
+          - name: country_geo_id
+            description: Foreign key to geography_index at country level.
+          - name: state_geo_id
+            description: Foreign key to geography_index at state level.
 
       - name: openfigi_security_index
         description: OpenFIGI security reference, 119K rows. Several ARRAY-typed identifier columns.

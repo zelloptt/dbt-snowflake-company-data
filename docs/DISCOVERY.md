@@ -87,11 +87,16 @@ attribute vocabulary; there is nothing else in the column:
 32 columns. The package reads `COMPANY_ID`, `CIK`, `COMPANY_NAME`, `EIN`,
 `SIC`, `SIC_CODE_CATEGORY`, `SIC_CODE_DESCRIPTION`, `SEC_FILER_CATEGORY`,
 `INCORPORATION_STATE`, `INCORPORATION_COUNTRY`, `ADDRESS_LINE_1`,
-`ADDRESS_LINE_2`, `CITY`, `STATE`, `ZIP`, `COUNTRY`, `PHONE_NUMBER`.
+`ADDRESS_LINE_2`, `CITY`, `STATE`, `ZIP`, `COUNTRY`, `COUNTRY_GEO_ID`,
+`STATE_GEO_ID`, `PHONE_NUMBER`.
 
 Note the SIC column is named **`SIC`**, not `SIC_CODE`. `SIC_CODE` does not
 exist on this object; `COMPANY_CHARACTERISTICS` uses `sic_code` as a
 *relationship_type value*. Easy to conflate; they are different things.
+
+`COUNTRY` and `STATE` are EDGAR state-or-country codes, not ISO. See trap 8.
+`COUNTRY_GEO_ID` / `STATE_GEO_ID` join to `GEOGRAPHY_INDEX` and are the
+trustworthy path to ISO codes.
 
 ### Others
 - `COMPANY_DOMAIN_RELATIONSHIPS`: `COMPANY_ID`, `COMPANY_NAME`, `DOMAIN_ID`, `RELATIONSHIP_START_DATE`, `RELATIONSHIP_END_DATE`
@@ -233,6 +238,54 @@ already normalised (no scheme, no `www.`, no path); only **65 rows** contain a
 **Consequence:** domain is an excellent deterministic match key but it is
 many-to-many. Matching on it must pick a winner rather than assume one row.
 
+### Trap 8: `COUNTRY` is EDGAR state-or-country codes, mixed, and full of empty strings
+
+`SEC_CIK_INDEX.COUNTRY` is not a country name and it is not ISO 3166. It is the
+SEC's [EDGAR state-or-country list](https://www.sec.gov/submit-filings/filer-support-resources/edgar-state-country-codes),
+the same vocabulary used for `STATE`. Current codes (post-February 2010); a
+[comparison to the pre-2010 list](https://www.sec.gov/edgar/searchedgar/edgarcompstate.htm)
+exists because searches return whatever the filer used at the time.
+
+Measured on the coalesced `country` column the mart used to publish:
+
+| Value | Rows | Official EDGAR meaning | Notes |
+|---|---:|---|---|
+| `X1` | 617,791 | United States | Country-level US. Not `US`. |
+| `E9` | 13,854 | Cayman Islands | |
+| `Z4` | 11,049 | Canada (federal) | Provinces are `A0`–`A9`, `B0`. |
+| `''` | 12,048 | *(not a code)* | Empty string, not NULL. |
+| `XX` / `xx` | 1,034 | Unknown | Official placeholder. |
+| `US` | 69 | *(not in the list)* | ISO alpha-2 leak. US is `X1`. |
+| `CA` | 14 | California | Or ISO Canada. Canada is `Z4`. |
+| `FR` | 1 | *(not in the current list)* | France is `I0`. Pre-2010 `FR` was "unknown state". |
+| `FL` | 1 | Florida | A state code in the country column. |
+
+`STATE` has the same shape: USPS codes (`TX`) alongside EDGAR codes (`A8`
+Quebec, `E9` Cayman) and **14,340 empty strings**. That is the list working
+as designed: it is one vocabulary for states *or* countries, so a Cayman
+address can legally put `E9` in `STATE`.
+
+Two modelling failures follow, and they compound.
+
+`coalesce(sec.country, eav.country)` treats `''` as present, so a blank SEC
+value masks a real attribute-table value. And `where country is not null`
+returns those 12,048 blanks plus the 1,034 `XX` placeholders, because none of
+them are NULL. Domains and identifiers already filter `!= ''`; this column did
+not.
+
+The ISO columns are the trustworthy ones. `country_iso_alpha2` /
+`country_iso_alpha3` resolve through `COUNTRY_GEO_ID` → `GEOGRAPHY_INDEX` and
+are populated on 681,787 rows, including rows whose EDGAR code is blank or
+`XX`. `state_iso_3166_2` does the same from `STATE_GEO_ID`.
+
+**Consequence:** do not filter on `country` or `state`. The mart exposes the
+EDGAR values as `edgar_country_code` / `edgar_state_code` after turning empty
+strings and `XX` into NULL, names them from the shipped SEC list
+(`snoco__edgar_state_country_codes` → `edgar_country_name` /
+`edgar_state_name`), and uses the ISO columns as the ones to filter on. No
+EDGAR → ISO mapping is maintained in the package; the geography index already
+is that mapping.
+
 ---
 
 ## What this share is not
@@ -265,4 +318,10 @@ select max(array_size(lei)) from <db>.public_data_free.company_index;
 -- trap 3
 select count(*) filter (where company_id is null), count(distinct cik), count(*)
 from <db>.public_data_free.sec_cik_index;
+
+-- trap 8
+select country, count(*)
+from <db>.public_data_free.sec_cik_index
+group by 1 order by 2 desc
+limit 20;
 ```

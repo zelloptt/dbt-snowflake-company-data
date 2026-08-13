@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_snoco__company_securities
+    description: >
+      Each record represents one security attributed to one company. 985,971
+      rows. security_id is type-qualified by security_id_type.
+    columns:
+      - name: company_id
+        data_tests:
+          - not_null
+      - name: security_id
+        data_tests:
+          - not_null
+      - name: security_id_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - openfigi_figi_id
+                  - openfigi_composite_id
+                  - openfigi_share_class_id
+                  - permid_quote_id
+                  - permid_security_id

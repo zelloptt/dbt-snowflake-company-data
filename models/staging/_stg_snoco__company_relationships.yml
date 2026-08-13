@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: stg_snoco__company_relationships
+    description: >
+      Each record represents one direction of one corporate relationship. 848
+      rows describing 424 edges, each stored as both Parent and Subsidiary.
+      Self-edges are excluded so the recursive hierarchy cannot loop.
+    columns:
+      - name: company_id
+        data_tests:
+          - not_null
+      - name: related_company_id
+        data_tests:
+          - not_null
+      - name: relationship_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Parent', 'Subsidiary']

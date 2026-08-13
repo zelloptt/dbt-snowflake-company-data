@@ -1,5 +1,5 @@
 name: 'snowflake_company_data'
-version: '0.1.0'
+version: '0.2.0'
 config-version: 2
 
 # The >=1.10.8 floor is not cosmetic and is not a guess. Generic tests in this

@@ -583,3 +583,51 @@ is a CTE, a `ref()`, or a var defaulting to `source()`), and nothing that
 overrides dbt Core behaviour for resources this package did not create (five
 distinctly named macros, none a dbt hook; vars and configs namespaced; all 13
 doc blocks `snoco_`-prefixed, which matters because doc block names are global).
+
+---
+
+## Country and state are EDGAR codes; ISO comes from the geography index
+
+`snoco__companies` used to publish `country` and `state` as the coalesced SEC
+and EAV values. Those columns are EDGAR state-or-country codes, not ISO and
+not a country name: `X1` is the United States (617,791 rows), `E9` Cayman,
+`Z4` Canada. They also carry 12,048 empty strings, 1,034 `XX`/`xx`
+placeholders, and a handful of ISO codes and one USPS state (`FL`) in the
+country column. `STATE` mixes USPS (`TX`) with EDGAR (`A8` Quebec) and 14,340
+empty strings.
+
+Two things made this worse than an undocumented vocabulary.
+
+Empty strings are truthy to `coalesce`, so a blank SEC country masked a real
+EAV one, and `where country is not null` returned the blanks. Domains and
+identifiers already filtered `!= ''`; this column did not. And the trustworthy
+values were already in the model: `country_iso_alpha2` / `alpha3`, populated
+on 681,787 rows via `country_geo_id` → `geography_index`, including rows
+whose EDGAR code is blank or `XX`. `state_geo_id` was staged and then dropped.
+
+So the mart now:
+
+- Filters on the ISO columns, and joins `state_geo_id` the same way as
+  `country_geo_id`, exposing `state_iso_3166_2`, `country_name`, `state_name`.
+- Keeps the source codes as `edgar_country_code` / `edgar_state_code`, after
+  turning `''` and `XX` into NULL *on each source before coalesce*, so a blank
+  SEC value can fall through to EAV.
+- Drops `country` and `state` as column names, because keeping them would
+  invite `where country = 'US'` against a column whose United States is `X1`.
+- Names the EDGAR codes from a shipped copy of the SEC list
+  (`snoco__edgar_state_country_codes` → `edgar_country_name` /
+  `edgar_state_name`). Ground rule 8 forbids copying the *share* into git. It
+  does not forbid a US government classification table; that is the same
+  exception SIC already had, and it is the thing that makes `X1` readable.
+  The list is a model, not a seed: `dbt run` has to materialize it, and it
+  disables with `snoco_company_enabled` the same way the company marts do.
+
+Considered and rejected: shipping an EDGAR → ISO seed. The geography index
+already is that mapping, it is what the share gives us, and inventing one
+would also pretend the 69 leaked ISO values are cleaner than they are. The
+name lookup is a different job and is the one the SEC list actually does.
+
+**Revisit if:** the provider starts writing ISO in `COUNTRY`, at which point
+`edgar_country_code` becomes a misnomer and the ISO join is the thing to
+re-check. Or if the SEC republishes the list, at which point the model needs
+a refresh from the same URL.

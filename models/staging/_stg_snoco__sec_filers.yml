@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: stg_snoco__sec_filers
+    description: >
+      Each record represents one SEC filer. 981,128 rows, unique on cik.
+      28.7% carry a NULL company_id and cannot be joined to the spine; they are
+      kept here deliberately so this model remains the complete filer universe.
+    columns:
+      - name: cik
+        description: "{{ doc('snoco_cik') }}"
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        description: >
+          Foreign key to stg_snoco__company_index, NULL on 28.7% of rows.
+          Deliberately not tested for not_null.
+      - name: sic_code
+        description: >
+          SIC industry code, from the source column named `sic`. Not to be
+          confused with the `sic_code` attribute in company_characteristics.
+      - name: country
+        description: >
+          EDGAR state-or-country code, not ISO. Empty strings and XX are passed
+          through; snoco__companies turns them into NULL. See docs/DISCOVERY.md
+          trap 8.
+      - name: country_geo_id
+        description: Foreign key to stg_snoco__geographies at country level.
+      - name: state_geo_id
+        description: Foreign key to stg_snoco__geographies at state level.

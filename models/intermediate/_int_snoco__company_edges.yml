@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: int_snoco__company_edges
+    description: >
+      Each record represents one parent-to-child edge, deduplicated to a single
+      direction from the source's mirrored storage. 424 rows.
+    columns:
+      - name: parent_company_id
+        data_tests:
+          - not_null
+      - name: child_company_id
+        data_tests:
+          - not_null

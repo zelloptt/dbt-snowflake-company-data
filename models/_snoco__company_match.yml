@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: snoco__company_match
+    description: >
+      Each record represents the single best company for one of your records.
+      Input rows with no candidate above the threshold are absent rather than
+      present with a null company_id, so a left join from your own table gives
+      you the unmatched set without a filter.
+    columns:
+      - name: match_input_id
+        description: Your identifier. One row per input row that matched.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('snoco__companies')
+                field: company_id
+      - name: match_score
+        data_tests:
+          - not_null
+      - name: runner_up_score
+        description: Score of the second-best candidate, NULL when there was only one.
+      - name: is_ambiguous
+        description: >
+          True when the runner-up scored within snoco__match_ambiguity_margin of
+          the winner. The winner is still a real answer, just not a confident
+          one, and these are the rows worth a human look.

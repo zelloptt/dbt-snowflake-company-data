@@ -1,5 +1,5 @@
 name: 'snoco_integration_tests'
-version: '0.1.0'
+version: '0.2.0'
 config-version: 2
 profile: 'snoco_integration_tests'
 
@@ -23,9 +23,11 @@ flags:
 # no package code changes, no live share, no Marketplace listing required to
 # run the suite.
 #
-# Six sources point straight at a seed. Three go through a thin input model
-# first, because their real columns are ARRAY-typed and a CSV seed cannot
-# express an ARRAY. Those models parse a delimited string into one.
+# Five sources point straight at a seed. Four go through a thin input model
+# first. Three of those exist because their real columns are ARRAY-typed and
+# a CSV seed cannot express an ARRAY. input_sec_cik_index exists so orphan
+# company_id values can be NULL while C5's country and state stay ''. C5 uses
+# the sentinel __EMPTY__ in the CSV; Fusion does not accept empty_as_null.
 vars:
   snowflake_company_data:
     snoco_company_index:                  "{{ ref('input_company_index') }}"
@@ -35,7 +37,7 @@ vars:
     snoco_company_domain_relationships:   "{{ ref('snoco_seed_company_domains') }}"
     snoco_company_relationships:          "{{ ref('snoco_seed_company_relationships') }}"
     snoco_company_security_relationships: "{{ ref('snoco_seed_company_securities') }}"
-    snoco_sec_cik_index:                  "{{ ref('snoco_seed_sec_cik_index') }}"
+    snoco_sec_cik_index:                  "{{ ref('input_sec_cik_index') }}"
     snoco_geography_index:                "{{ ref('snoco_seed_geography_index') }}"
 
     # Matching runs against a synthetic CRM table so the whole opt-in path is

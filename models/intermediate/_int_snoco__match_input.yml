@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: int_snoco__match_input
+    description: >
+      Each record represents one of the consumer's records, normalised into the
+      shape the matching models expect. Ephemeral: it exists to keep the column
+      mapping in one place rather than repeating it in both matching models.
+      Disabled unless snoco_matching_enabled is true.
+    columns:
+      - name: match_input_id
+        description: "{{ doc('snoco_match_input_id') }}"
+      - name: match_input_name
+        description: The name as supplied, when snoco__match_name_column is set.
+      - name: match_input_name_normalized
+        description: "{{ doc('snoco_company_name_normalized') }}"
+      - name: match_input_domain
+        description: "{{ doc('snoco_domain') }}"

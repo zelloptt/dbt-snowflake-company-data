@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: snoco__company_hierarchy
+    description: >
+      Each record represents one company's position on one path through a
+      corporate hierarchy.
+
+      Two things to know before using it. It is a DAG, not a tree: 21 companies
+      have more than one parent, so company_id is NOT unique here. And it is
+      nearly empty, because the free share carries 424 distinct edges against a
+      2.9M-company spine, about 0.015% coverage.
+    columns:
+      - name: company_hierarchy_sk
+        description: >
+          Surrogate key over the root-to-company path. The grain of this model.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_id
+        description: >
+          The company. Deliberately NOT tested for uniqueness: a company with
+          two parents appears on two paths.
+        data_tests:
+          - not_null
+      - name: parent_company_id
+        description: Immediate parent on this path. NULL at the root.
+      - name: root_company_id
+        description: Ultimate parent, reached by walking up to depth 0.
+        data_tests:
+          - not_null
+      - name: depth
+        description: Distance from the root. 0 at the root. Observed maximum is 2.
+        data_tests:
+          - not_null
+      - name: hierarchy_path
+        description: Root-to-node path of company ids. Also the cycle guard.
+      - name: is_ultimate_parent
+        description: True when this company is the root of its tree.
+      - name: parent_count
+        description: How many distinct parents this company has across the whole graph.
+      - name: has_multiple_parents
+        description: >
+          True when the company sits under more than one parent. These are the
+          rows that make company_id non-unique, and the ones to resolve
+          explicitly if you need a single position per company.

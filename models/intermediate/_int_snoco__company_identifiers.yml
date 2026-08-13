@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: int_snoco__company_identifiers
+    description: >
+      Each record represents one identifier held by one company, in long form.
+      Where the LEI array fan-out guard is applied. See docs/DISCOVERY.md trap 1.
+    columns:
+      - name: company_id
+        data_tests:
+          - not_null
+      - name: identifier_type
+        data_tests:
+          - not_null
+      - name: identifier_value
+        data_tests:
+          - not_null

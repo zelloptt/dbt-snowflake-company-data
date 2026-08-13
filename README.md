@@ -34,19 +34,24 @@ This package absorbs that complexity once so you do not have to solve it in ever
 | `snoco__company_match` | one row per matched record of yours | opt-in |
 
 Nine staging models sit underneath, one per source object, renamed and typed and
-nothing else. Three public macros are usable on their own:
-`normalize_company_name`, `normalize_domain` and `company_name_similarity`.
+nothing else. `snoco__edgar_state_country_codes` ships the SEC's EDGAR
+state-or-country list, so `X1` has a name. Three public macros
+are usable on their own: `normalize_company_name`, `normalize_domain` and
+`company_name_similarity`.
 (The blocking key is `_blocking_key`, which is private: the leading underscore
 means it is an implementation detail of the matching models and its signature
 may change in a patch release.)
 
 Row counts are from the free share as of 2026-08-08 and will drift.
 
-Two things the table above will not tell you, so they are said here. The
+Three things the table above will not tell you, so they are said here. The
 **hierarchy is nearly empty**: 424 edges against 2.9M companies, roughly 0.015%
-coverage. And there is **no employee count and no revenue** anywhere in the free
+coverage. There is **no employee count and no revenue** anywhere in the free
 share, so this is an enrichment and resolution layer, not a prospecting
-database.
+database. And **`country` on the source is an EDGAR state-or-country code, not
+ISO**: `X1` is the United States. Filter `snoco__companies` on
+`country_iso_alpha2` and `state_iso_3166_2`. `edgar_country_name` is the
+readable form. Empty strings and the `XX` placeholder are NULL.
 
 See [DECISIONLOG.md](https://github.com/zelloptt/dbt-snowflake-company-data/blob/main/DECISIONLOG.md) for the reasoning behind each modeling choice.
 
@@ -80,7 +85,7 @@ hub syntax does not resolve for it. Add to `packages.yml` in your dbt project:
 ```yaml
 packages:
   - git: "https://github.com/zelloptt/dbt-snowflake-company-data.git"
-    revision: 0.1.0
+    revision: 0.2.0
 ```
 
 Then `dbt deps`. Pin `revision` to a release tag, never to a branch. A branch
@@ -100,7 +105,7 @@ package:
 ```yaml
 packages:
   - package: zelloptt/snowflake_company_data
-    version: [">=0.1.0", "<0.2.0"]
+    version: [">=0.2.0", "<0.3.0"]
 ```
 
 While pre-1.0, pin to a minor range. Breaking changes ship as minor bumps until 1.0.0, which is standard semver practice for 0.x and is why the upper bound matters. If your project uses `dependencies.yml` instead, add the same block there.

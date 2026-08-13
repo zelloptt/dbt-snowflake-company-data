@@ -33,7 +33,7 @@ body:
       placeholder: |
         packages:
           - package: zelloptt/snowflake_company_data
-            version: [">=0.1.0", "<0.2.0"]
+            version: [">=0.2.0", "<0.3.0"]
     validations:
       required: true
 
