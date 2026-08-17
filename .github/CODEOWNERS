@@ -6,10 +6,10 @@
 # Once a data team slug exists in the org, replace the individual list with
 # it (e.g. `* @zelloptt/data`) so membership changes do not require a PR here.
 
-* @zelloptt/team-ai-data
+* @zelloptt/ai-data-team
 
 # Release and licensing surface: narrower ownership on purpose.
-/LICENSE @zelloptt/team-ai-data
-/RELEASE.md @zelloptt/team-ai-data
-/CHANGELOG.md @zelloptt/team-ai-data
-/.github/workflows/ @zelloptt/team-ai-data
+/LICENSE @zelloptt/ai-data-team
+/RELEASE.md @zelloptt/ai-data-team
+/CHANGELOG.md @zelloptt/ai-data-team
+/.github/workflows/ @zelloptt/ai-data-team
