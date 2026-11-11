@@ -1,15 +1,13 @@
 # Code owners are requested for review automatically on every PR.
 #
-# Use GitHub usernames or team slugs, never email addresses. This file
-# becomes public when the repository does.
-#
-# Once a data team slug exists in the org, replace the individual list with
-# it (e.g. `* @zelloptt/data`) so membership changes do not require a PR here.
+# Use team slugs, never email addresses: this file is public. A team keeps
+# membership changes out of this file. The team needs write access to the repo,
+# or GitHub ignores the rule.
 
-* @zelloptt/ai-data-team
+* @zelloptt/analytics-team
 
 # Release and licensing surface: narrower ownership on purpose.
-/LICENSE @zelloptt/ai-data-team
-/RELEASE.md @zelloptt/ai-data-team
-/CHANGELOG.md @zelloptt/ai-data-team
-/.github/workflows/ @zelloptt/ai-data-team
+/LICENSE @zelloptt/analytics-team
+/RELEASE.md @zelloptt/analytics-team
+/CHANGELOG.md @zelloptt/analytics-team
+/.github/workflows/ @zelloptt/analytics-team
