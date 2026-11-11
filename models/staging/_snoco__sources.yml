@@ -62,10 +62,10 @@ sources:
             description: "{{ doc('snoco_cik') }}"
           - name: lei
             description: >
-              ARRAY of Legal Entity Identifiers. Populated on ~2% of rows. A
-              provider grouping bug gives 230 companies a shared array, the
-              largest holding 5,287 entries carried verbatim by 47 different
-              companies; see docs/DISCOVERY.md trap 1.
+              ARRAY of Legal Entity Identifiers. Populated on ~2% of rows,
+              each array one element since the provider fixed its grouping
+              bug in 2026-11. Before that, 230 companies shared arrays of up
+              to 5,287 entries; see docs/DISCOVERY.md trap 1.
           - name: permid_company_id
             description: "{{ doc('snoco_permid_company_id') }}"
           - name: primary_ticker
@@ -83,7 +83,9 @@ sources:
         description: >
           Entity-attribute-value attributes per company, 11.7M rows across 15
           relationship_type values. Not unique on (company_id,
-          relationship_type): ~1,900 companies carry multiple lei values.
+          relationship_type): ~1,900 companies carried multiple lei values
+          until the provider fixed its LEI grouping bug in 2026-11; none do
+          as of 2026-11-11.
         columns:
           - name: company_id
             description: "{{ doc('snoco_company_id') }}"

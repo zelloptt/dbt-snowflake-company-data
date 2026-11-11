@@ -1,5 +1,5 @@
 name: 'snowflake_company_data'
-version: '0.1.0'
+version: '0.1.1'
 config-version: 2
 
 # The >=1.10.8 floor is not cosmetic and is not a guess. Generic tests in this
@@ -112,22 +112,25 @@ vars:
     snoco__match_ambiguity_margin: 0.02
     snoco__hierarchy_max_depth: 10
 
-    # Identifier arrays in COMPANY_INDEX are mostly single-valued, but a
-    # provider-side grouping bug gives 230 companies a shared LEI array, the
-    # largest holding 5,287 entries and carried verbatim by 47 different
-    # companies. Flattening those unguarded adds 270,001 rows that assert
-    # ownership of identifiers the company does not hold. Arrays longer than
-    # this are dropped rather than fanned out, and a warn-severity test reports
-    # how many. See docs/DISCOVERY.md trap 1.
+    # LEI arrays longer than this are dropped rather than fanned out. Until
+    # 2026-11 a provider-side grouping bug gave 230 companies a shared LEI
+    # array, the largest holding 5,287 entries carried verbatim by 47 different
+    # companies, and flattening those unguarded added 270,001 rows asserting
+    # ownership of identifiers the company does not hold. Snowflake fixed it
+    # upstream: measured 2026-11-11, no LEI array in COMPANY_INDEX holds more
+    # than one element. The cap stays as a safety net, because it costs nothing
+    # while every array is size 1 and it is the only thing between a recurrence
+    # and false company-to-LEI rows. See docs/DISCOVERY.md trap 1.
     snoco__max_identifier_array_size: 25
 
-    # The count of oversized LEI arrays we already know about, and how far it
-    # may move before the guard test speaks up. The test watches for DRIFT from
-    # this baseline rather than for the defect itself, because the defect is
-    # permanent, is the provider's, and warning about it on every build trains
-    # everyone to ignore the warning. Set the baseline to 0 to warn whenever any
-    # oversized array exists.
-    snoco__expected_oversized_lei_arrays: 230
+    # The count of oversized LEI arrays we expect, and how far it may move
+    # before the guard test speaks up. The test watches for DRIFT from this
+    # baseline. It was 230 while the provider's grouping bug was live; the bug
+    # was fixed upstream (0 oversized arrays, measured 2026-11-11), so the
+    # baseline is 0 and the test warns only if oversized arrays come back. With
+    # the default tolerance it stays silent until more than 50 return; set the
+    # tolerance to 0 as well to warn on the first one.
+    snoco__expected_oversized_lei_arrays: 0
     snoco__oversized_lei_array_tolerance: 50
 
     # ------------------------------------------------------------------

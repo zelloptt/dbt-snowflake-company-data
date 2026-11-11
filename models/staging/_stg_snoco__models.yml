@@ -18,8 +18,10 @@ models:
       - name: lei_array
         description: >
           ARRAY of Legal Entity Identifiers, passed through unflattened. Flatten
-          only via int_snoco__company_identifiers, which guards against the
-          5,287-element arrays a provider bug attaches to ~1,900 companies.
+          only via int_snoco__company_identifiers, which caps array size. The
+          provider bug that shared arrays of up to 5,287 entries across
+          unrelated companies was fixed upstream in 2026-11; the cap stays as
+          a safety net.
       - name: ein
         description: "{{ doc('snoco_ein') }}"
       - name: cik
