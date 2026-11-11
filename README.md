@@ -80,7 +80,7 @@ hub syntax does not resolve for it. Add to `packages.yml` in your dbt project:
 ```yaml
 packages:
   - git: "https://github.com/zelloptt/dbt-snowflake-company-data.git"
-    revision: 0.1.0
+    revision: 0.1.1
 ```
 
 Then `dbt deps`. Pin `revision` to a release tag, never to a branch. A branch

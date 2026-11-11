@@ -404,10 +404,48 @@ Replaced with a drift check: `snoco__expected_oversized_lei_arrays` (230) and
 `snoco__oversized_lei_array_tolerance` (50). Silent while the count sits where
 we measured it, speaks up if the provider fixes the bug or makes it worse, which
 are the only two states worth a human's attention. Setting the baseline to 0
-restores "warn if any exist" for anyone who wants it.
+restores "warn if any exist" for anyone who wants it. (Corrected 2026-11: only
+with the tolerance at 0 as well. At baseline 0 and tolerance 50 the test
+tolerates up to 50. See the next entry.)
 
 Still `warn` rather than `error`: it is provider data we do not control, and
 drift is a reason to look, not a reason to break someone's build.
+
+---
+
+## The LEI cap stays after the provider fixed the bug; the baseline drops to 0
+
+Snowflake fixed the LEI grouping bug upstream in 2026-11. Measured 2026-11-11
+with aggregate queries: the share's `COMPANY_INDEX` has 2,934,685 rows, 63,978
+with an LEI, **no array longer than one element**, and so nothing over the cap. A
+replica cloned the same day agrees (2,933,483 rows, 63,556 with an LEI, largest
+array 1). The guard test then did what it was built to do and warned on every
+consumer build that the count had fallen from 230 beyond tolerance.
+
+**`snoco__expected_oversized_lei_arrays` goes from 230 to 0.** The baseline is a
+statement of what the share carries, and it now carries none. At 0 the test is
+silent on a clean share and speaks up only if oversized arrays return.
+
+**`snoco__max_identifier_array_size` stays at 25.** The "Revisit if" on the cap
+said it *can* be raised or removed once the bug is fixed, not that it should
+be. Keeping it costs nothing: every array is size 1, so the filter withholds no
+rows and the guarded and unguarded flattens are identical (63,978 each). Removing
+it would save one predicate and leave a recurrence free to write false
+company-to-LEI rows silently, which is the failure the cap exists for. A guard
+that never fires is cheap insurance; the problem was only ever a *test* that
+always fires.
+
+**Tolerance stays at 50**, which was out of scope for a patch. The consequence
+is worth stating: with baseline 0 the test warns once more than 50 oversized
+arrays return, not on the first. The bug last affected 230 companies, so a
+recurrence of the same shape clears 50 easily, and the cap withholds the rows
+either way. A consumer who wants the first one reported sets the tolerance to 0.
+
+Considered and rejected: deleting the test along with the defect. It is the only
+signal that would show a regression, and it now costs nothing on a clean share.
+
+**Revisit if:** oversized arrays reappear, or the share's LEI column becomes a
+scalar, at which point the cap and the test have nothing to guard.
 
 ---
 

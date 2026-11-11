@@ -1,5 +1,5 @@
 name: 'snoco_integration_tests'
-version: '0.1.0'
+version: '0.1.1'
 config-version: 2
 profile: 'snoco_integration_tests'
 
@@ -47,7 +47,8 @@ vars:
     snoco__match_domain_column: website
 
     # The fixture deliberately contains one company over the guard, so the
-    # baseline is 1 rather than the 230 the real share carries.
+    # baseline is 1. The real share has carried none since the provider fixed
+    # its LEI grouping bug in 2026-11, which is why the package default is 0.
     snoco__expected_oversized_lei_arrays: 1
     snoco__oversized_lei_array_tolerance: 0
 
