@@ -32,6 +32,7 @@ no full refresh is needed.
   shape the array cap cannot see.
 - The `snoco_lei` doc block and the `lei` / `lei_array` column descriptions no
   longer describe the 5,287-element shared array as current.
+- The README's git install example pins `revision: 0.1.1`.
 
 # snowflake_company_data v0.1.0
 
