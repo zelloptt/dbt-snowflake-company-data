@@ -49,6 +49,43 @@ rewriting history, not because something is reading the file today.
 6. A GitHub release is not required for `dbt deps` to resolve the version, only the tag is. It is required for the Package Hub listing and it is what a human reads, so do it anyway.
 7. hubcap indexes hourly and opens a PR against `hub.getdbt.com`. Expect the new version to appear within a business day. Until the package is listed (see below), the tag is still what makes a `git:`-style install work.
 
+### Patch releases on a maintenance branch
+
+The steps above assume `main` is the thing being released. It is not when
+`main` already carries an unreleased minor. Tagging `main` as a patch would ship
+that minor's breaking changes under a patch number, so the patch is cut from the
+last release instead. 0.1.1 was released this way, from `release/0.1.x`, while
+`main` held 0.2.0.
+
+1. Cut `release/<major.minor>.x` from the last tag of that line if it does not
+   exist yet (`release/0.1.x` from `0.1.0`). Land the fix there first, through a
+   PR, with the patch version's H1 at the top of `CHANGELOG.md` and `version:`
+   bumped in both project files, exactly as above.
+2. Forward-port the fix to `main` in a second PR. Its changelog section goes
+   under its own H1, **below** the current top version, and `version:` on `main`
+   does not change. The top of the file still names the next release from
+   `main`, which keeps rule 2 of the changelog format notes true.
+3. Tag the merge commit on the maintenance branch, not on `main`. Same bare
+   semver, same annotated form, then the GitHub release:
+
+   ```bash
+   git fetch origin
+   git tag -a 0.1.1 <merge-commit-on-release/0.1.x> -m "snowflake_company_data 0.1.1"
+   git push origin 0.1.1
+   gh release create 0.1.1 --verify-tag --title "0.1.1" --notes-file <(sed -n '/^# snowflake_company_data v0.1.1$/,/^# snowflake_company_data v0.1.0$/p' CHANGELOG.md | sed '$d')
+   ```
+
+4. Nothing special is needed for the hub. hubcap fetches every tag in the repo,
+   not just tags reachable from the default branch, and takes the highest
+   semver as `latest`. So a patch to an older line shows up as an older version
+   and does not replace a newer minor as the default install. Checked against
+   hubcap's `version.py` (`get_valid_remote_tags`, `latest_version`).
+
+CI only runs on pushes to `main` and on pull requests, so a merge into a
+maintenance branch gets no post-merge run. A squash merge into an unmoved base
+has the same tree as the PR head CI tested. Confirm that before tagging rather
+than assuming it.
+
 ## Compliance with hubcap's best practices
 
 [`package-best-practices.md`](https://github.com/dbt-labs/hubcap/blob/main/package-best-practices.md)
