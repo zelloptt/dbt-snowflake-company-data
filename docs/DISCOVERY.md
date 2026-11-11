@@ -52,7 +52,7 @@ reported by `INFORMATION_SCHEMA.COLUMNS`. **Every column is nullable.**
 | `ENTITY_LEVEL` | TEXT | **Constant `'Corporate'`** for all 2,918,929 rows. Carries no information; not surfaced. |
 | `EIN` | TEXT | populated on 306,666 (10.5%) |
 | `CIK` | TEXT | populated on 697,780 (23.9%) |
-| `LEI` | **ARRAY** | populated on 59,163 (2.0%). See trap 1. |
+| `LEI` | **ARRAY** | populated on 63,978 of 2,934,685 (2.2%), every array exactly one element (measured 2026-11-11; was 59,163, with arrays up to 5,287). See trap 1. |
 | `PERMID_COMPANY_ID` | TEXT | populated on 2,826,707 (96.8%) |
 | `PRIMARY_TICKER` | TEXT | populated on 19,565 (0.7%) |
 | `PRIMARY_EXCHANGE_CODE` / `_NAME` | TEXT | |
@@ -77,7 +77,7 @@ attribute vocabulary; there is nothing else in the column:
 | `business_address_city` | 683,981 | 23.4% |
 | `business_address_zip` | 680,205 | 23.3% |
 | `business_address_line2` | 336,662 | 11.5% |
-| `lei` | 333,143 | 11.4% |
+| `lei` | 63,978 | 2.2% (measured 2026-11-11; was 333,143 while trap 1 was live) |
 | `ein` | 306,666 | 10.5% |
 | `sec_industry_group` | 126,029 | 4.3% |
 | `sic_description` | 38,706 | 1.3% |
@@ -108,9 +108,39 @@ trustworthy path to ISO codes.
 
 ## Traps
 
-### Trap 1: unrelated companies share one identical 5,287-element `LEI` array
+### Trap 1: unrelated companies share one identical 5,287-element `LEI` array (fixed by the provider, 2026-11)
 
-`COMPANY_INDEX.LEI` is an ARRAY. Measured:
+**Status: fixed upstream as of 2026-11.** Re-measured 2026-11-11 with aggregate
+queries against `PUBLIC_DATA_FREE.COMPANY_INDEX` on the share:
+
+| | Now (2026-11-11) | When found |
+|---|---:|---:|
+| rows in `COMPANY_INDEX` | 2,934,685 | 2,918,929 |
+| non-null `LEI` | 63,978 | 59,163 |
+| more than one element | 0 | 1,913 |
+| more than 25 elements | 0 | 230 |
+| largest array | 1 | 5,287 |
+| `LATERAL FLATTEN(lei)` rows, unguarded | 63,978 | 333,143 |
+| `LATERAL FLATTEN(lei)` rows, guarded | 63,978 | 63,142 |
+
+A replica cloned the same day matched in shape: 2,933,483 rows, 63,556 with an
+LEI, 0 oversized, largest array 1. The guard now withholds nothing and the
+unguarded and guarded flattens are identical.
+
+`snoco__max_identifier_array_size` stays at 25 as a safety net, since it costs
+nothing while every array is size 1. `snoco__expected_oversized_lei_arrays` is
+now 0, so the guard test warns only if oversized arrays return. See
+`DECISIONLOG.md`.
+
+**What the fix does not change.** A single LEI can still sit on more than one
+company: 1,312 of 62,614 distinct LEIs belong to 2 to 4 companies (2,676
+companies in all, 1,263 of those LEIs on exactly two). That is a different
+shape from the shared arrays below, it is not something the array cap can see,
+and a lookup by LEI should still expect the occasional duplicate.
+
+The rest of this section is the defect as it was found, kept for history.
+
+`COMPANY_INDEX.LEI` is an ARRAY. Measured when the trap was found:
 
 | | Companies |
 |---|---:|
@@ -145,7 +175,9 @@ identifier table by about 7%); the damage is that the rows are wrong, not that
 there are many of them.
 
 `snoco__max_identifier_array_size` (default 25) drops these before the flatten.
-A warn-severity test reports the affected count on every run.
+A warn-severity test compares the affected count with
+`snoco__expected_oversized_lei_arrays` and warns on drift; that baseline was 230
+until the provider fix and is 0 from 0.1.1.
 
 ### Trap 2: `RELATIONSHIP_END_DATE` is always NULL, so there is no SCD close-out
 
@@ -312,8 +344,9 @@ select relationship_type, count(*)
 from <db>.public_data_free.company_characteristics
 group by 1 order by 2 desc;
 
--- trap 1
-select max(array_size(lei)) from <db>.public_data_free.company_index;
+-- trap 1 (expect 1 since the provider fix in 2026-11)
+select max(array_size(lei)), count_if(array_size(lei) > 25)
+from <db>.public_data_free.company_index;
 
 -- trap 3
 select count(*) filter (where company_id is null), count(distinct cik), count(*)

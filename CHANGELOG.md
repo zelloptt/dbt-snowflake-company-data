@@ -53,6 +53,41 @@ placeholders. See `DECISIONLOG.md` and `docs/DISCOVERY.md` trap 8.
   (`_snoco__companies.yml` next to `snoco__companies.sql`). Bundled
   `_models.yml` files are gone.
 
+# snowflake_company_data v0.1.1
+
+Patch release. No model, column or variable is added, removed or renamed, and
+no full refresh is needed.
+
+## Bug Fixes
+
+- **The LEI guard test no longer warns on every build.** Snowflake fixed the
+  LEI grouping bug upstream in 2026-11: measured 2026-11-11, no LEI array in
+  `COMPANY_INDEX` holds more than one element, so none exceed
+  `snoco__max_identifier_array_size`. Against the old baseline of 230,
+  `assert_snoco__lei_array_guard_baseline` reported "Oversized LEI arrays
+  DECREASED beyond tolerance" on every consumer build. The default
+  `snoco__expected_oversized_lei_arrays` is now `0`, so the test warns only if
+  oversized arrays come back. If you override this var, set it to your source's
+  current count: `0` against the share or a current replica.
+
+## Under the Hood
+
+- `snoco__max_identifier_array_size` stays at 25 as a safety net. With every
+  array at size 1 it withholds nothing, and it is what stops a recurrence from
+  writing false company-to-LEI rows. See `DECISIONLOG.md`.
+- The guard test's fallback default matches the new baseline, and its
+  "decreased" message now points at the var rather than suggesting the cap be
+  removed.
+
+## Documentation
+
+- `docs/DISCOVERY.md` trap 1 is marked fixed by the provider as of 2026-11,
+  with re-measured counts beside the original ones, which stay as history. It
+  also records that 1,312 LEIs still sit on more than one company, a different
+  shape the array cap cannot see.
+- The `snoco_lei` doc block and the `lei` / `lei_array` column descriptions no
+  longer describe the 5,287-element shared array as current.
+
 # snowflake_company_data v0.1.0
 
 Initial release. Not yet published to the dbt Package Hub.
