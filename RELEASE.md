@@ -73,8 +73,8 @@ submitting, because the document changes.
 | Assumes table names | MAY | Yes, deliberately. Explicitly permitted, and the objects come from a known listing |
 | `require-dbt-version` declared | MUST | Met. `[">=1.10.8", "<3.0.0"]` |
 | Allows subsequent minor and patch releases | SHOULD | Met, and wider: the ceiling also admits Fusion's 2.x |
-| Dependencies imported from the hub, not git | SHOULD | Not applicable. `packages: []` |
-| Widest possible dependency range, no patch pins | SHOULD | Not applicable. Same |
+| Dependencies imported from the hub, not git | SHOULD | Met. `metaplane/dbt_expectations` from the hub (brings `godatadriven/dbt_date`) |
+| Widest possible dependency range, no patch pins | SHOULD | Met. `[">=0.10.0", "<0.11.0"]`, the whole 0.10 line |
 | Does not override dbt Core behaviour affecting other resources | MUST | Met. Five macros, all distinctly named, none of them a dbt hook; vars and model configs namespaced under `snowflake_company_data`; all 13 doc blocks `snoco_`-prefixed |
 | Uses dbt Core cross-database macros where available | SHOULD | Partial, deliberately. See below |
 | Disambiguated resource names | SHOULD | Met. The `snoco` infix on every model, test, and doc block |

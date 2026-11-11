@@ -45,6 +45,17 @@ placeholders. See `DECISIONLOG.md` and `docs/DISCOVERY.md` trap 8.
 
 ## Under the Hood
 
+- **New dependency: `metaplane/dbt_expectations` `[">=0.10.0", "<0.11.0"]`**,
+  which brings `godatadriven/dbt_date`. If your project still pins
+  `calogica/dbt_expectations`, move to `metaplane/dbt_expectations`, the
+  maintained fork, or `dbt deps` will see two packages named
+  `dbt_expectations`.
+- **The LEI guard test is now declared in YAML.** The singular
+  `assert_snoco__lei_array_guard_baseline` is replaced by
+  `dbt_expectations.expect_table_row_count_to_be_between` on
+  `stg_snoco__company_index`, named `snoco__lei_array_guard_baseline`. It reads
+  the same vars and warns in the same cases. Selectors or alerts that use the
+  old name need the new one. See `DECISIONLOG.md`.
 - `int_snoco__company_attributes` drops empty-string attribute values the same
   way identifiers do, so a blank address cannot win the EAV rank.
 - The EDGAR list is a model, not a seed, so `dbt run` materializes it and it
@@ -87,6 +98,7 @@ no full refresh is needed.
   shape the array cap cannot see.
 - The `snoco_lei` doc block and the `lei` / `lei_array` column descriptions no
   longer describe the 5,287-element shared array as current.
+- The README's git install example pins `revision: 0.1.1`.
 
 # snowflake_company_data v0.1.0
 

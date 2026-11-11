@@ -1,4 +1,10 @@
 packages:
+- package: godatadriven/dbt_date
+  name: dbt_date
+  version: 0.21.0
+- package: metaplane/dbt_expectations
+  name: dbt_expectations
+  version: 0.10.10
 - local: ..
   name: snowflake_company_data
 sha1_hash: f0236c7f2e9f17b56369d819042ae243dfe27246

@@ -449,6 +449,47 @@ scalar, at which point the cap and the test have nothing to guard.
 
 ---
 
+## Data tests are declared in YAML, so the package takes `dbt_expectations`
+
+Hand-written singular `assert_*` tests are replaced by generic tests declared
+in YAML. A singular test is a query only its author reads: it is not attached
+to the model it checks, its arguments are buried in SQL, and every one carries
+its own idea of what a failing row looks like. Nearly all of them can be stated
+as a generic test from `dbt_utils` or `dbt_expectations`, which puts the
+assertion beside the model and column it is about.
+
+The LEI guard was first, in 0.2.0. Its drift check maps exactly onto
+`dbt_expectations.expect_table_row_count_to_be_between` with a `row_condition`:
+it counts rows with an oversized array and requires the count to fall between
+baseline minus tolerance (floored at 0) and baseline plus tolerance. The vars
+are unchanged. Verified on the integration fixtures: it passes at the
+configured baseline and warns both at the old 230 baseline and with an oversized
+fixture array at baseline 0, tolerance 0. The one thing lost is the old test's
+"increased" or "decreased" message, which now lives in the test's
+`description`.
+
+**This reverses "keep `packages: []` if at all possible".** That stance was
+right as a default, since every dependency constrains every consumer's
+resolution. The cost here is small and known:
+
+- `metaplane/dbt_expectations` is the maintained fork. `calogica/dbt_expectations`
+  stopped at 0.10.4 and the hub redirects to metaplane. Range
+  `[">=0.10.0", "<0.11.0"]`, the whole 0.10 line, with `require-dbt-version`
+  `<3.0.0` at 0.10.10, so it does not cost the Fusion ceiling.
+- It brings `godatadriven/dbt_date` transitively.
+- Zello's own consumer project already pins `metaplane/dbt_expectations`
+  0.10.10, so it resolves with no change there.
+
+`dbt_utils` is not added yet. Nothing uses it, and `dbt_expectations` covers
+the range checks the two remaining package `assert_*` tests need. Add it when a
+test actually needs it. Ground rule 6 still bans
+`dbt_utils.unique_combination_of_columns`.
+
+**Revisit if:** `dbt_expectations` stops tracking dbt or Fusion releases. That
+is what happened to the calogica original.
+
+---
+
 ## No `fill_staging_columns` / schema-drift shim
 
 Fivetran's staging pattern emits `cast(null as <type>) as <column>` when an expected column is missing, so downstream models always compile. That trade makes sense for them: a hard failure across thousands of tenants with per-tenant schema variance is worse than a silently null column.
