@@ -7,6 +7,27 @@ models:
       spine. Renamed and typed; no other transformation. 2,918,929 rows.
       entity_level and global_tickers are dropped because both are constant or
       empty on every row; see docs/DISCOVERY.md.
+    data_tests:
+      # The LEI fan-out guard's drift check. Counts companies whose LEI array
+      # is over snoco__max_identifier_array_size and warns when that count
+      # leaves snoco__expected_oversized_lei_arrays plus or minus
+      # snoco__oversized_lei_array_tolerance. Baseline 0 since the provider
+      # fixed its grouping bug in 2026-11. See docs/DISCOVERY.md trap 1.
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          name: snoco__lei_array_guard_baseline
+          description: >
+            Warns when the number of companies with an LEI array over
+            snoco__max_identifier_array_size drifts outside
+            snoco__expected_oversized_lei_arrays plus or minus
+            snoco__oversized_lei_array_tolerance. Above the range: shared
+            arrays are back, see docs/DISCOVERY.md trap 1. Below it: the
+            baseline var is set higher than the source now carries.
+          arguments:
+            row_condition: "array_size(lei_array) > {{ var('snoco__max_identifier_array_size', 25) }}"
+            min_value: "{{ [var('snoco__expected_oversized_lei_arrays', 0) - var('snoco__oversized_lei_array_tolerance', 50), 0] | max }}"
+            max_value: "{{ var('snoco__expected_oversized_lei_arrays', 0) + var('snoco__oversized_lei_array_tolerance', 50) }}"
+          config:
+            severity: warn
     columns:
       - name: company_id
         description: "{{ doc('snoco_company_id') }}"
@@ -18,8 +39,10 @@ models:
       - name: lei_array
         description: >
           ARRAY of Legal Entity Identifiers, passed through unflattened. Flatten
-          only via int_snoco__company_identifiers, which guards against the
-          5,287-element arrays a provider bug attaches to ~1,900 companies.
+          only via int_snoco__company_identifiers, which caps array size. The
+          provider bug that shared arrays of up to 5,287 entries across
+          unrelated companies was fixed upstream in 2026-11; the cap stays as
+          a safety net.
       - name: ein
         description: "{{ doc('snoco_ein') }}"
       - name: cik

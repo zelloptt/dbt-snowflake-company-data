@@ -34,9 +34,10 @@ US Employer Identification Number. Populated on roughly 10% of the spine.
 {% docs snoco_lei %}
 Legal Entity Identifier. Populated on roughly 2% of the spine, and carried on
 the source as an ARRAY rather than a scalar because a company can hold several.
-Arrays above `snoco__max_identifier_array_size` are withheld: a provider
-grouping bug attaches one shared array of up to 5,287 entries to 230 unrelated
-companies. See docs/DISCOVERY.md trap 1.
+Arrays above `snoco__max_identifier_array_size` are withheld. Until 2026-11 a
+provider grouping bug attached one shared array of up to 5,287 entries to 230
+unrelated companies; the provider has fixed it, every array now holds one
+element, and the cap remains as a safety net. See docs/DISCOVERY.md trap 1.
 {% enddocs %}
 
 {% docs snoco_permid_company_id %}

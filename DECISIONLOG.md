@@ -404,10 +404,89 @@ Replaced with a drift check: `snoco__expected_oversized_lei_arrays` (230) and
 `snoco__oversized_lei_array_tolerance` (50). Silent while the count sits where
 we measured it, speaks up if the provider fixes the bug or makes it worse, which
 are the only two states worth a human's attention. Setting the baseline to 0
-restores "warn if any exist" for anyone who wants it.
+restores "warn if any exist" for anyone who wants it. (Corrected 2026-11: only
+with the tolerance at 0 as well. At baseline 0 and tolerance 50 the test
+tolerates up to 50. See the next entry.)
 
 Still `warn` rather than `error`: it is provider data we do not control, and
 drift is a reason to look, not a reason to break someone's build.
+
+---
+
+## The LEI cap stays after the provider fixed the bug; the baseline drops to 0
+
+Snowflake fixed the LEI grouping bug upstream in 2026-11. Measured 2026-11-11
+with aggregate queries: the share's `COMPANY_INDEX` has 2,934,685 rows, 63,978
+with an LEI, **no array longer than one element**, and so nothing over the cap. A
+replica cloned the same day agrees (2,933,483 rows, 63,556 with an LEI, largest
+array 1). The guard test then did what it was built to do and warned on every
+consumer build that the count had fallen from 230 beyond tolerance.
+
+**`snoco__expected_oversized_lei_arrays` goes from 230 to 0.** The baseline is a
+statement of what the share carries, and it now carries none. At 0 the test is
+silent on a clean share and speaks up only if oversized arrays return.
+
+**`snoco__max_identifier_array_size` stays at 25.** The "Revisit if" on the cap
+said it *can* be raised or removed once the bug is fixed, not that it should
+be. Keeping it costs nothing: every array is size 1, so the filter withholds no
+rows and the guarded and unguarded flattens are identical (63,978 each). Removing
+it would save one predicate and leave a recurrence free to write false
+company-to-LEI rows silently, which is the failure the cap exists for. A guard
+that never fires is cheap insurance; the problem was only ever a *test* that
+always fires.
+
+**Tolerance stays at 50**, which was out of scope for a patch. The consequence
+is worth stating: with baseline 0 the test warns once more than 50 oversized
+arrays return, not on the first. The bug last affected 230 companies, so a
+recurrence of the same shape clears 50 easily, and the cap withholds the rows
+either way. A consumer who wants the first one reported sets the tolerance to 0.
+
+Considered and rejected: deleting the test along with the defect. It is the only
+signal that would show a regression, and it now costs nothing on a clean share.
+
+**Revisit if:** oversized arrays reappear, or the share's LEI column becomes a
+scalar, at which point the cap and the test have nothing to guard.
+
+---
+
+## Data tests are declared in YAML, so the package takes `dbt_expectations`
+
+Hand-written singular `assert_*` tests are replaced by generic tests declared
+in YAML. A singular test is a query only its author reads: it is not attached
+to the model it checks, its arguments are buried in SQL, and every one carries
+its own idea of what a failing row looks like. Nearly all of them can be stated
+as a generic test from `dbt_utils` or `dbt_expectations`, which puts the
+assertion beside the model and column it is about.
+
+The LEI guard was first, in 0.2.0. Its drift check maps exactly onto
+`dbt_expectations.expect_table_row_count_to_be_between` with a `row_condition`:
+it counts rows with an oversized array and requires the count to fall between
+baseline minus tolerance (floored at 0) and baseline plus tolerance. The vars
+are unchanged. Verified on the integration fixtures: it passes at the
+configured baseline and warns both at the old 230 baseline and with an oversized
+fixture array at baseline 0, tolerance 0. The one thing lost is the old test's
+"increased" or "decreased" message, which now lives in the test's
+`description`.
+
+**This reverses "keep `packages: []` if at all possible".** That stance was
+right as a default, since every dependency constrains every consumer's
+resolution. The cost here is small and known:
+
+- `metaplane/dbt_expectations` is the maintained fork. `calogica/dbt_expectations`
+  stopped at 0.10.4 and the hub redirects to metaplane. Range
+  `[">=0.10.0", "<0.11.0"]`, the whole 0.10 line, with `require-dbt-version`
+  `<3.0.0` at 0.10.10, so it does not cost the Fusion ceiling.
+- It brings `godatadriven/dbt_date` transitively.
+- Zello's own consumer project already pins `metaplane/dbt_expectations`
+  0.10.10, so it resolves with no change there.
+
+`dbt_utils` is not added yet. Nothing uses it, and `dbt_expectations` covers
+the range checks the two remaining package `assert_*` tests need. Add it when a
+test actually needs it. Ground rule 6 still bans
+`dbt_utils.unique_combination_of_columns`.
+
+**Revisit if:** `dbt_expectations` stops tracking dbt or Fusion releases. That
+is what happened to the calogica original.
 
 ---
 
