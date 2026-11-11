@@ -6,7 +6,7 @@ Read this before making any change. It exists so sessions do not drift from the 
 
 An open-source dbt package published to the dbt Package Hub as `zelloptt/snowflake_company_data`. It models Snowflake's free public company data (Marketplace listing `GZTSZ290BV255`) and provides a matching layer for joining external records to the company spine.
 
-**The repo is private today and will be made public.** Git history is preserved across that flip. Assume every commit is already public.
+**The repo is public, git history included.** Every commit, branch, tag, PR description and review comment is public the moment it is pushed. Treat everything you write as public.
 
 ## Naming
 
